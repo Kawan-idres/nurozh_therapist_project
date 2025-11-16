@@ -1,5 +1,44 @@
+# Dependencies
 node_modules
-# Keep environment variables out of version control
-.env
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Generated files
 /generated/prisma
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Build
+dist
+build
+coverage
+
+# Testing
+.nyc_output
+
+# OpenAPI/Swagger
+docs
+
+.env
+swagger.json
+swagger.yaml
+
