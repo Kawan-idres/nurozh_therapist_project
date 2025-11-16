@@ -5,6 +5,7 @@ import {
   deleteTodo,
 } from "../services/todo.service.js";
 
+
 export const getAllTodos = async (req, res) => {
   const todos = await getTodos();
   res.json(todos);
