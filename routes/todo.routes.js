@@ -5,12 +5,17 @@ import {
   updateTodoById,
   deleteTodoById,
 } from "../controllers/todo.controller.js";
+import {
+  validateCreateTodo,
+  validateUpdateTodo,
+  validateTodoId,
+} from "../middleware/validation.js";
 
 const router = express.Router();
 
 router.get("/", getAllTodos);
-router.post("/", createNewTodo);
-router.put("/:id", updateTodoById);
-router.delete("/:id", deleteTodoById);
+router.post("/", validateCreateTodo, createNewTodo);
+router.put("/:id", validateTodoId, validateUpdateTodo, updateTodoById);
+router.delete("/:id", validateTodoId, deleteTodoById);
 
 export default router;
