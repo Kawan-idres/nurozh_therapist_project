@@ -29,18 +29,11 @@ export const HTTP_STATUS = {
 
 // Error Messages
 export const ERROR_MESSAGES = {
-  TODO_NOT_FOUND: "Todo not found",
+  NOT_FOUND: "Resource not found",
   VALIDATION_ERROR: "Validation failed",
   INTERNAL_ERROR: "Internal server error",
   DATABASE_ERROR: "Database operation failed",
   RATE_LIMIT_EXCEEDED: "Too many requests, please try again later",
-};
-
-// Success Messages
-export const SUCCESS_MESSAGES = {
-  TODO_CREATED: "Todo created successfully",
-  TODO_UPDATED: "Todo updated successfully",
-  TODO_DELETED: "Todo deleted successfully",
 };
 
 // Environment

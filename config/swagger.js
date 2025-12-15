@@ -6,10 +6,10 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Todo API Documentation",
+      title: "API Documentation",
       version: "1.0.0",
       description:
-        "A production-ready RESTful API for managing todos with Express.js, Prisma ORM, and PostgreSQL",
+        "A production-ready RESTful API with Express.js, Prisma ORM, and PostgreSQL",
       contact: {
         name: "API Support",
       },
@@ -28,76 +28,9 @@ const options = {
         name: "Health",
         description: "Health check endpoints",
       },
-      {
-        name: "Todos",
-        description: "Todo management endpoints",
-      },
     ],
     components: {
       schemas: {
-        Todo: {
-          type: "object",
-          required: ["id", "title", "completed", "createdAt", "updatedAt"],
-          properties: {
-            id: {
-              type: "integer",
-              description: "Unique identifier",
-              example: 1,
-            },
-            title: {
-              type: "string",
-              description: "Todo title",
-              example: "Buy groceries",
-              minLength: 1,
-              maxLength: 255,
-            },
-            completed: {
-              type: "boolean",
-              description: "Completion status",
-              example: false,
-            },
-            createdAt: {
-              type: "string",
-              format: "date-time",
-              description: "Creation timestamp",
-            },
-            updatedAt: {
-              type: "string",
-              format: "date-time",
-              description: "Last update timestamp",
-            },
-          },
-        },
-        CreateTodoRequest: {
-          type: "object",
-          required: ["title"],
-          properties: {
-            title: {
-              type: "string",
-              description: "Todo title",
-              example: "Buy groceries",
-              minLength: 1,
-              maxLength: 255,
-            },
-          },
-        },
-        UpdateTodoRequest: {
-          type: "object",
-          properties: {
-            title: {
-              type: "string",
-              description: "Todo title",
-              example: "Buy groceries and cook dinner",
-              minLength: 1,
-              maxLength: 255,
-            },
-            completed: {
-              type: "boolean",
-              description: "Completion status",
-              example: true,
-            },
-          },
-        },
         SuccessResponse: {
           type: "object",
           properties: {
@@ -123,7 +56,7 @@ const options = {
             data: {
               type: "array",
               items: {
-                $ref: "#/components/schemas/Todo",
+                type: "object",
               },
             },
             pagination: {
@@ -191,16 +124,6 @@ const options = {
         },
       },
       parameters: {
-        TodoId: {
-          name: "id",
-          in: "path",
-          required: true,
-          schema: {
-            type: "integer",
-            minimum: 1,
-          },
-          description: "Todo ID",
-        },
         Page: {
           name: "page",
           in: "query",
@@ -231,7 +154,7 @@ const options = {
 export const swaggerSpec = swaggerJsdoc(options);
 export const swaggerUiOptions = {
   customCss: ".swagger-ui .topbar { display: none }",
-  customSiteTitle: "Todo API Docs",
+  customSiteTitle: "API Docs",
 };
 
 export { swaggerUi };

@@ -1,7 +1,7 @@
 {
-  "name": "prisma_todo",
+  "name": "express-api",
   "version": "1.0.0",
-  "description": "Production-ready Todo API with Express.js, Prisma, and PostgreSQL",
+  "description": "Production-ready API with Express.js, Prisma, and PostgreSQL",
   "main": "server.js",
   "type": "module",
   "engines": {
@@ -21,7 +21,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "todo",
     "api",
     "rest",
     "express",

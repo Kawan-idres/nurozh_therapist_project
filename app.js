@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import compression from "compression";
 import morgan from "morgan";
-import todoRoutes from "./routes/todo.routes.js";
 import healthRoutes from "./routes/health.routes.js";
 import {
   errorHandler,
@@ -10,7 +9,6 @@ import {
 } from "./middleware/errorHandler.js";
 import { securityHeaders, rateLimiter } from "./middleware/security.js";
 import { requestId } from "./middleware/requestId.js";
-import { API_PREFIX } from "./config/constants.js";
 import logger from "./config/logger.js";
 import {
   swaggerUi,
@@ -56,18 +54,14 @@ app.use("/health", healthRoutes);
 app.use("/api-docs", swaggerUi.serve);
 app.get("/api-docs", swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
-// API routes with versioning
-app.use(`${API_PREFIX}/todos`, todoRoutes);
-
 // Welcome route
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Todo API",
+    message: "API Server",
     version: "1.0.0",
     endpoints: {
       health: "/health",
-      todos: `${API_PREFIX}/todos`,
       documentation: "/api-docs",
     },
   });

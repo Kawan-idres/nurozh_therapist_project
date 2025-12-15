@@ -1,12 +1,10 @@
-# Todo API
+# Express API
 
-A production-ready RESTful API for managing todos built with Express.js, Prisma ORM, and PostgreSQL following industry best practices.
+A production-ready RESTful API built with Express.js, Prisma ORM, and PostgreSQL following industry best practices.
 
 ## Features
 
 - RESTful API design with API versioning
-- Full CRUD operations for todos
-- Pagination support
 - Input validation using Zod schemas
 - Comprehensive error handling
 - Request/Response logging with Winston
@@ -36,15 +34,12 @@ A production-ready RESTful API for managing todos built with Express.js, Prisma 
 ## Project Structure
 
 ```
-prisma_todo/
 ├── config/               # Configuration files
 │   ├── constants.js      # Application constants
 │   ├── env.js            # Environment validation
 │   ├── logger.js         # Winston logger setup
 │   ├── prisma.js         # Prisma client
 │   └── swagger.js        # API documentation config
-├── controllers/          # Request handlers
-│   └── todo.controller.js
 ├── middleware/           # Custom middleware
 │   ├── errorHandler.js   # Global error handler
 │   ├── requestId.js      # Request ID tracking
@@ -54,12 +49,7 @@ prisma_todo/
 │   ├── schema.prisma
 │   └── migrations/
 ├── routes/               # API routes
-│   ├── health.routes.js
-│   └── todo.routes.js
-├── schemas/              # Zod validation schemas
-│   └── todo.schema.js
-├── services/             # Business logic
-│   └── todo.service.js
+│   └── health.routes.js
 ├── utils/                # Utility functions
 │   └── errors.js         # Custom error classes
 ├── app.js                # Express app setup
@@ -80,7 +70,7 @@ prisma_todo/
 1. Clone the repository
 ```bash
 git clone <repository-url>
-cd prisma_todo
+cd express-api
 ```
 
 2. Install dependencies
@@ -98,7 +88,7 @@ NODE_ENV=development
 PORT=3000
 
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/todo_app?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
 
 # Logging
 LOG_LEVEL=debug
@@ -136,61 +126,6 @@ Visit `http://localhost:3000/api-docs` for the full Swagger/OpenAPI documentatio
 #### Health Check
 ```http
 GET /health
-```
-
-#### Get All Todos (with pagination)
-```http
-GET /api/v1/todos?page=1&limit=10
-```
-
-**Query Parameters:**
-- `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 10, max: 100)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [...],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 50,
-    "totalPages": 5,
-    "hasMore": true
-  }
-}
-```
-
-#### Get Todo by ID
-```http
-GET /api/v1/todos/:id
-```
-
-#### Create Todo
-```http
-POST /api/v1/todos
-Content-Type: application/json
-
-{
-  "title": "Buy groceries"
-}
-```
-
-#### Update Todo
-```http
-PUT /api/v1/todos/:id
-Content-Type: application/json
-
-{
-  "title": "Buy groceries and cook dinner",
-  "completed": true
-}
-```
-
-#### Delete Todo
-```http
-DELETE /api/v1/todos/:id
 ```
 
 ## Development
@@ -280,18 +215,6 @@ Winston is used for structured logging with the following features:
 
 Logs are stored in the `logs/` directory.
 
-## Database Schema
-
-### Todo Model
-
-| Field | Type | Description |
-|-------|------|-------------|
-| id | Int | Auto-increment primary key |
-| title | String | Todo title (required) |
-| completed | Boolean | Completion status (default: false) |
-| createdAt | DateTime | Creation timestamp |
-| updatedAt | DateTime | Last update timestamp |
-
 ## Environment Variables
 
 | Variable | Required | Default | Description |
@@ -324,7 +247,7 @@ Logs are stored in the `logs/` directory.
 npm install -g pm2
 
 # Start application
-pm2 start server.js --name todo-api
+pm2 start server.js --name api
 
 # Setup auto-restart on system reboot
 pm2 startup
@@ -360,7 +283,3 @@ Timeout: 30 seconds
 ## License
 
 ISC
-
-## Support
-
-For issues and questions, please open an issue on the repository.

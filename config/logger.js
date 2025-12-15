@@ -28,7 +28,7 @@ const logger = winston.createLogger({
     timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
     logFormat
   ),
-  defaultMeta: { service: "todo-api" },
+  defaultMeta: { service: "api" },
   transports: [
     // Write all logs to console
     new winston.transports.Console({

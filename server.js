@@ -14,7 +14,7 @@ const server = app.listen(PORT, () => {
   });
   console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📝 Health check: http://localhost:${PORT}/health`);
-  console.log(`📚 API Endpoint: http://localhost:${PORT}/api/v1/todos\n`);
+  console.log(`📚 API Docs: http://localhost:${PORT}/api-docs\n`);
 });
 
 // Graceful shutdown handler
