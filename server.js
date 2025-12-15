@@ -1,7 +1,7 @@
-import { env } from "./config/env.js";
-import app from "./app.js";
-import logger from "./config/logger.js";
-import prisma from "./config/prisma.js";
+import { env } from "./src/config/env.js";
+import app from "./src/app.js";
+import logger from "./src/config/logger.js";
+import prisma from "./src/config/prisma.js";
 
 const PORT = env.PORT;
 
@@ -12,9 +12,10 @@ const server = app.listen(PORT, () => {
     environment: env.NODE_ENV,
     nodeVersion: process.version,
   });
-  console.log(`\n🚀 Server running on port ${PORT}`);
+  console.log(`\n🚀 Nurozh Therapy Platform API running on port ${PORT}`);
   console.log(`📝 Health check: http://localhost:${PORT}/health`);
-  console.log(`📚 API Docs: http://localhost:${PORT}/api-docs\n`);
+  console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
+  console.log(`🔗 API Base: http://localhost:${PORT}/api/v1\n`);
 });
 
 // Graceful shutdown handler

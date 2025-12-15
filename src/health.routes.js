@@ -1,6 +1,6 @@
 import express from "express";
-import prisma from "../config/prisma.js";
-import { HTTP_STATUS } from "../config/constants.js";
+import prisma from "./config/prisma.js";
+import { HTTP_STATUS } from "./config/constants.js";
 
 const router = express.Router();
 

@@ -1,7 +1,7 @@
 {
-  "name": "express-api",
+  "name": "nurozh-therapy-api",
   "version": "1.0.0",
-  "description": "Production-ready API with Express.js, Prisma, and PostgreSQL",
+  "description": "Nurozh Therapy Platform API with Express.js, Prisma, and PostgreSQL",
   "main": "server.js",
   "type": "module",
   "engines": {
@@ -18,6 +18,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "seed": "node src/seeders/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -25,19 +26,26 @@
     "rest",
     "express",
     "prisma",
-    "postgresql"
+    "postgresql",
+    "therapy",
+    "mental-health",
+    "nurozh"
   ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-rate-limit": "^7.4.1",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
+    "multer": "^2.0.2",
     "prisma": "^6.19.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

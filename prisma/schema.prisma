@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for Nurozh Therapy Platform
+// No FK constraints - relationships handled at application level
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +8,492 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ==================== USERS & AUTHENTICATION ====================
+
+model User {
+  id                      String    @id @default(uuid()) @db.Uuid
+  email                   String?   @unique @db.VarChar(255)
+  phone                   String?   @db.VarChar(20)
+  password_hash           String?   @db.VarChar(255)
+  auth_provider           String?   @db.VarChar(20)
+  first_name              String    @db.VarChar(100)
+  last_name               String    @db.VarChar(100)
+  date_of_birth           DateTime? @db.Date
+  gender                  String?   @db.VarChar(20)
+  avatar_url              String?   @db.Text
+  preferred_language      String?   @default("en") @db.VarChar(5)
+  timezone                String?   @default("UTC") @db.VarChar(50)
+  status                  String?   @default("active") @db.VarChar(30)
+  email_verified_at       DateTime? @db.Timestamp(6)
+  phone_verified_at       DateTime? @db.Timestamp(6)
+  onboarding_completed_at DateTime? @db.Timestamp(6)
+  free_session_used       Boolean?  @default(false)
+  last_login_at           DateTime? @db.Timestamp(6)
+  fcm_token               String?   @db.Text
+  device_info             Json?     @db.JsonB
+  created_at              DateTime  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at              DateTime? @db.Timestamp(6)
+
+  @@map("users")
+}
+
+model Admin {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  password_hash String    @db.VarChar(255)
+  first_name    String    @db.VarChar(100)
+  last_name     String    @db.VarChar(100)
+  role          String?   @default("admin") @db.VarChar(50)
+  is_active     Boolean?  @default(true)
+  last_login_at DateTime? @db.Timestamp(6)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("admins")
+}
+
+model Therapist {
+  id                       String    @id @default(uuid()) @db.Uuid
+  email                    String    @unique @db.VarChar(255)
+  phone                    String?   @db.VarChar(20)
+  password_hash            String    @db.VarChar(255)
+  first_name               String    @db.VarChar(100)
+  last_name                String    @db.VarChar(100)
+  date_of_birth            DateTime? @db.Date
+  gender                   String?   @db.VarChar(20)
+  avatar_url               String?   @db.Text
+  bio                      Json?     @db.JsonB // Multilingual: {"en": "...", "ar": "...", "ku": "..."}
+  title                    Json?     @db.JsonB // Multilingual
+  years_of_experience      Int?
+  license_number           String?   @db.VarChar(100)
+  session_rate_amount      Decimal?  @db.Decimal(10, 2)
+  session_rate_currency    String?   @default("USD") @db.VarChar(3)
+  session_duration_minutes Int?      @default(50)
+  spoken_languages         String[]  @db.Text
+  status                   String?   @default("pending") @db.VarChar(30)
+  approved_by              String?   @db.Uuid // References admins.id
+  approved_at              DateTime? @db.Timestamp(6)
+  preferred_language       String?   @default("en") @db.VarChar(5)
+  timezone                 String?   @default("UTC") @db.VarChar(50)
+  last_login_at            DateTime? @db.Timestamp(6)
+  fcm_token                String?   @db.Text
+  device_info              Json?     @db.JsonB
+  created_by               String?   @db.Uuid // References admins.id
+  created_at               DateTime  @default(now()) @db.Timestamp(6)
+  updated_at               DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at               DateTime? @db.Timestamp(6)
+
+  @@map("therapists")
+}
+
+// ==================== RBAC (Role-Based Access Control) ====================
+
+model Role {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique @db.VarChar(50) // super_admin, therapist, patient
+  description String?   @db.Text
+  is_active   Boolean?  @default(true)
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(100) // e.g., "users:read", "bookings:create"
+  description String?  @db.Text
+  module      String?  @db.VarChar(50) // e.g., "users", "bookings", "therapists"
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  role_id       String   @db.Uuid // References roles.id
+  permission_id String   @db.Uuid // References permissions.id
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+
+  @@id([role_id, permission_id])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  token      String    @unique @db.Text
+  user_type  String    @db.VarChar(20) // admin, therapist, user
+  user_id    String    @db.Uuid
+  expires_at DateTime  @db.Timestamp(6)
+  revoked_at DateTime? @db.Timestamp(6)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("refresh_tokens")
+}
+
+// ==================== SPECIALTIES ====================
+
+model Specialty {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          Json      @db.JsonB // Multilingual: {"en": "...", "ar": "...", "ku": "..."}
+  description   Json?     @db.JsonB // Multilingual
+  icon_url      String?   @db.Text
+  is_active     Boolean?  @default(true)
+  display_order Int?      @default(0)
+  created_by    String?   @db.Uuid // References admins.id
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("specialties")
+}
+
+model TherapistSpecialty {
+  therapist_id String   @db.Uuid // References therapists.id
+  specialty_id String   @db.Uuid // References specialties.id
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+
+  @@id([therapist_id, specialty_id])
+  @@map("therapist_specialties")
+}
+
+// ==================== OTP & VERIFICATION ====================
+
+model OtpVerification {
+  id          String    @id @default(uuid()) @db.Uuid
+  phone       String    @db.VarChar(20)
+  otp_code    String    @db.VarChar(6)
+  purpose     String    @db.VarChar(20) // registration, login, password_reset
+  expires_at  DateTime  @db.Timestamp(6)
+  verified_at DateTime? @db.Timestamp(6)
+  attempts    Int?      @default(0)
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("otp_verifications")
+}
+
+// ==================== THERAPIST DOCUMENTS ====================
+
+model TherapistDocument {
+  id               String    @id @default(uuid()) @db.Uuid
+  therapist_id     String    @db.Uuid // References therapists.id
+  document_type    String?   @db.VarChar(30) // license, certification, degree, id_document
+  title            String?   @db.VarChar(255)
+  file_url         String    @db.Text
+  file_name        String?   @db.VarChar(255)
+  file_size_bytes  BigInt?
+  mime_type        String?   @db.VarChar(100)
+  status           String?   @default("pending") @db.VarChar(20) // pending, approved, rejected
+  reviewed_by      String?   @db.Uuid // References admins.id
+  reviewed_at      DateTime? @db.Timestamp(6)
+  rejection_reason String?   @db.Text
+  expires_at       DateTime? @db.Date
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("therapist_documents")
+}
+
+// ==================== QUESTIONNAIRES ====================
+
+model QuestionnaireCategory {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          Json      @db.JsonB // Multilingual
+  description   Json?     @db.JsonB // Multilingual
+  display_order Int?      @default(0)
+  is_active     Boolean?  @default(true)
+  created_by    String?   @db.Uuid // References admins.id
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("questionnaire_categories")
+}
+
+model Question {
+  id              String    @id @default(uuid()) @db.Uuid
+  category_id     String?   @db.Uuid // References questionnaire_categories.id
+  question_text   Json      @db.JsonB // Multilingual
+  question_type   String    @db.VarChar(30) // single_choice, multiple_choice, scale, text
+  is_required     Boolean?  @default(true)
+  display_order   Int?      @default(0)
+  is_active       Boolean?  @default(true)
+  scale_min       Int?
+  scale_max       Int?
+  scale_min_label Json?     @db.JsonB // Multilingual
+  scale_max_label Json?     @db.JsonB // Multilingual
+  created_by      String?   @db.Uuid // References admins.id
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("questions")
+}
+
+model QuestionOption {
+  id            String   @id @default(uuid()) @db.Uuid
+  question_id   String   @db.Uuid // References questions.id
+  option_text   Json     @db.JsonB // Multilingual
+  display_order Int?     @default(0)
+  is_active     Boolean? @default(true)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  updated_at    DateTime @updatedAt @db.Timestamp(6)
+
+  @@map("question_options")
+}
+
+model QuestionnaireAnswer {
+  id                  String    @id @default(uuid()) @db.Uuid
+  user_id             String    @db.Uuid // References users.id
+  question_id         String    @db.Uuid // References questions.id
+  answer_text         String?   @db.Text
+  answer_scale        Int?
+  selected_option_ids String[]  @db.Uuid // Array of question_options.id
+  question_snapshot   Json?     @db.JsonB // Snapshot of question at time of answer
+  answered_at         DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("questionnaire_answers")
+}
+
+// ==================== AVAILABILITY ====================
+
+model TherapistAvailability {
+  id           String   @id @default(uuid()) @db.Uuid
+  therapist_id String   @db.Uuid // References therapists.id
+  day_of_week  String   @db.VarChar(15) // monday, tuesday, etc.
+  start_time   DateTime @db.Time(6)
+  end_time     DateTime @db.Time(6)
+  is_active    Boolean? @default(true)
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @updatedAt @db.Timestamp(6)
+
+  @@map("therapist_availability")
+}
+
+model TherapistAvailabilityException {
+  id             String    @id @default(uuid()) @db.Uuid
+  therapist_id   String    @db.Uuid // References therapists.id
+  exception_date DateTime  @db.Date
+  is_available   Boolean?  @default(false)
+  start_time     DateTime? @db.Time(6)
+  end_time       DateTime? @db.Time(6)
+  reason         String?   @db.Text
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("therapist_availability_exceptions")
+}
+
+// ==================== BOOKINGS & SESSIONS ====================
+
+model Booking {
+  id                        String    @id @default(uuid()) @db.Uuid
+  user_id                   String    @db.Uuid // References users.id
+  therapist_id              String    @db.Uuid // References therapists.id
+  session_type              String    @db.VarChar(20) // video, audio, chat
+  scheduled_start           DateTime  @db.Timestamp(6)
+  scheduled_end             DateTime  @db.Timestamp(6)
+  duration_minutes          Int
+  is_free_session           Boolean?  @default(false)
+  amount                    Decimal?  @db.Decimal(10, 2)
+  currency                  String?   @default("USD") @db.VarChar(3)
+  status                    String?   @default("pending") @db.VarChar(30) // pending, confirmed, completed, cancelled, no_show
+  rescheduled_from_booking_id String? @db.Uuid // References bookings.id
+  reschedule_reason         String?   @db.Text
+  rescheduled_at            DateTime? @db.Timestamp(6)
+  cancelled_at              DateTime? @db.Timestamp(6)
+  cancellation_reason       String?   @db.Text
+  cancelled_by              String?   @db.VarChar(20) // user, therapist, admin, system
+  confirmed_at              DateTime? @db.Timestamp(6)
+  user_notes                String?   @db.Text
+  therapist_notes           String?   @db.Text
+  created_at                DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("bookings")
+}
+
+model Session {
+  id                         String    @id @default(uuid()) @db.Uuid
+  booking_id                 String    @db.Uuid // References bookings.id
+  session_type               String    @db.VarChar(20) // video, audio, chat
+  status                     String?   @default("scheduled") @db.VarChar(20) // scheduled, in_progress, completed, cancelled
+  started_at                 DateTime? @db.Timestamp(6)
+  ended_at                   DateTime? @db.Timestamp(6)
+  actual_duration_minutes    Int?
+  provider                   String?   @db.VarChar(50) // e.g., daily, twilio, agora
+  room_id                    String?   @db.VarChar(255)
+  room_url                   String?   @db.Text
+  provider_metadata          Json?     @db.JsonB
+  user_token                 String?   @db.Text
+  therapist_token            String?   @db.Text
+  recording_url              String?   @db.Text
+  recording_duration_seconds Int?
+  created_at                 DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("sessions")
+}
+
+// ==================== CONVERSATIONS & MESSAGES ====================
+
+model Conversation {
+  id                    String    @id @default(uuid()) @db.Uuid
+  user_id               String    @db.Uuid // References users.id
+  therapist_id          String    @db.Uuid // References therapists.id
+  session_id            String?   @db.Uuid // References sessions.id (optional, for session-linked convos)
+  last_message_at       DateTime? @db.Timestamp(6)
+  user_last_read_at     DateTime? @db.Timestamp(6)
+  therapist_last_read_at DateTime? @db.Timestamp(6)
+  is_active             Boolean?  @default(true)
+  created_at            DateTime  @default(now()) @db.Timestamp(6)
+  updated_at            DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("conversations")
+}
+
+model Message {
+  id              String    @id @default(uuid()) @db.Uuid
+  conversation_id String    @db.Uuid // References conversations.id
+  sender_type     String    @db.VarChar(20) // user, therapist, system
+  sender_id       String    @db.Uuid
+  content         String    @db.Text
+  message_type    String?   @default("text") @db.VarChar(20) // text, image, file, system
+  is_read         Boolean?  @default(false)
+  read_at         DateTime? @db.Timestamp(6)
+  deleted_at      DateTime? @db.Timestamp(6)
+  deleted_by      String?   @db.Uuid
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("messages")
+}
+
+// ==================== SUBSCRIPTIONS ====================
+
+model Subscription {
+  id           String    @id @default(uuid()) @db.Uuid
+  user_id      String    @db.Uuid // References users.id
+  therapist_id String    @db.Uuid // References therapists.id
+  type         String    @db.VarChar(20) // weekly, monthly
+  amount       Decimal   @db.Decimal(10, 2)
+  currency     String    @db.VarChar(3)
+  status       String    @db.VarChar(20) // active, cancelled, expired
+  started_at   DateTime  @db.Timestamp(6)
+  renews_at    DateTime? @db.Timestamp(6)
+  cancelled_at DateTime? @db.Timestamp(6)
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("subscriptions")
+}
+
+// ==================== PAYMENTS ====================
+
+model Payment {
+  id                  String    @id @default(uuid()) @db.Uuid
+  booking_id          String?   @db.Uuid // References bookings.id
+  user_id             String    @db.Uuid // References users.id
+  subscription_id     String?   @db.Uuid // References subscriptions.id
+  amount              Decimal   @db.Decimal(10, 2)
+  currency            String?   @default("USD") @db.VarChar(3)
+  furatpay_invoice_id String?   @db.VarChar(255)
+  furatpay_pay_link   String?   @db.Text
+  status              String?   @default("pending") @db.VarChar(20) // pending, paid, failed, refunded
+  paid_at             DateTime? @db.Timestamp(6)
+  expires_at          DateTime? @db.Timestamp(6)
+  refunded_at         DateTime? @db.Timestamp(6)
+  refund_amount       Decimal?  @db.Decimal(10, 2)
+  refund_reason       String?   @db.Text
+  webhook_payload     Json?     @db.JsonB
+  webhook_received_at DateTime? @db.Timestamp(6)
+  payment_method      String?   @db.VarChar(50)
+  transaction_id      String?   @db.VarChar(255)
+  created_at          DateTime  @default(now()) @db.Timestamp(6)
+  updated_at          DateTime  @updatedAt @db.Timestamp(6)
+
+  @@map("payments")
+}
+
+model TherapistPayout {
+  id           String    @id @default(uuid()) @db.Uuid
+  therapist_id String    @db.Uuid // References therapists.id
+  period_start DateTime  @db.Date
+  period_end   DateTime  @db.Date
+  total_amount Decimal   @db.Decimal(10, 2)
+  currency     String    @db.VarChar(3)
+  status       String    @db.VarChar(20) // pending, processing, paid, failed
+  paid_at      DateTime? @db.Timestamp(6)
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("therapist_payouts")
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id                  String    @id @default(uuid()) @db.Uuid
+  recipient_type      String    @db.VarChar(20) // user, therapist, admin
+  recipient_id        String    @db.Uuid
+  template_id         String?   @db.Uuid // References notification_templates.id
+  title               String    @db.VarChar(255)
+  body                String    @db.Text
+  channel             String?   @default("push") @db.VarChar(20) // push, email, sms, in_app
+  status              String?   @default("pending") @db.VarChar(20) // pending, sent, delivered, failed
+  is_read             Boolean?  @default(false)
+  read_at             DateTime? @db.Timestamp(6)
+  sent_at             DateTime? @db.Timestamp(6)
+  delivered_at        DateTime? @db.Timestamp(6)
+  failed_at           DateTime? @db.Timestamp(6)
+  failure_reason      String?   @db.Text
+  related_entity_type String?   @db.VarChar(50) // booking, payment, session, etc.
+  related_entity_id   String?   @db.Uuid
+  data                Json?     @db.JsonB // Additional data for the notification
+  created_at          DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @unique @db.VarChar(100)
+  title_template Json     @db.JsonB // Multilingual
+  body_template  Json     @db.JsonB // Multilingual
+  channel        String?  @default("push") @db.VarChar(20)
+  is_active      Boolean? @default(true)
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+  updated_at     DateTime @updatedAt @db.Timestamp(6)
+
+  @@map("notification_templates")
+}
+
+// ==================== AUDIT & LOGGING ====================
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actor_type  String   @db.VarChar(20) // user, therapist, admin, system
+  actor_id    String?  @db.Uuid
+  action      String   @db.VarChar(100) // e.g., "user.created", "booking.cancelled"
+  entity_type String   @db.VarChar(50) // e.g., "user", "booking", "therapist"
+  entity_id   String   @db.Uuid
+  old_values  Json?    @db.JsonB
+  new_values  Json?    @db.JsonB
+  ip_address  String?  @db.VarChar(45)
+  user_agent  String?  @db.Text
+  metadata    Json?    @db.JsonB
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  @@map("audit_logs")
+}
+
+model WebhookLog {
+  id               String    @id @default(uuid()) @db.Uuid
+  source           String    @db.VarChar(50) // e.g., "furatpay", "daily"
+  event_type       String?   @db.VarChar(100)
+  headers          Json?     @db.JsonB
+  payload          Json      @db.JsonB
+  processed        Boolean?  @default(false)
+  processed_at     DateTime? @db.Timestamp(6)
+  processing_error String?   @db.Text
+  response_status  Int?
+  response_body    String?   @db.Text
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+
+  @@map("webhook_logs")
 }
