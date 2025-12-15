@@ -1,184 +1,217 @@
-# Express API
+# Nurozh Therapy Platform API
 
-A production-ready RESTful API built with Express.js, Prisma ORM, and PostgreSQL following industry best practices.
+A comprehensive therapy and mental health platform API built with Express.js, Prisma ORM, and PostgreSQL.
 
 ## Features
 
-- RESTful API design with API versioning
-- Input validation using Zod schemas
-- Comprehensive error handling
-- Request/Response logging with Winston
-- Security headers with Helmet
-- Rate limiting protection
-- CORS enabled
-- Response compression
-- Request correlation IDs for tracing
-- Health check endpoint
-- Graceful shutdown handling
-- OpenAPI/Swagger documentation
-- ESLint and Prettier configured
-- Environment variable validation
+- **Multi-User Authentication** - JWT-based auth for admins, therapists, and patients
+- **Role-Based Access Control** - 4 roles with 49 granular permissions
+- **Booking System** - Schedule and manage therapy sessions
+- **Video/Audio Sessions** - Support for video, audio, and chat sessions
+- **Messaging** - Real-time conversations between users and therapists
+- **Questionnaires** - Mental health assessments and onboarding
+- **Subscriptions & Payments** - Flexible payment and subscription management
+- **Multilingual Support** - English, Arabic, and Kurdish (en, ar, ku)
+- **Security** - Helmet, rate limiting, input validation
+- **API Documentation** - Swagger/OpenAPI
 
 ## Tech Stack
 
-- **Runtime:** Node.js (>=18.0.0)
-- **Framework:** Express.js v5
-- **Database:** PostgreSQL
-- **ORM:** Prisma v6
-- **Validation:** Zod
-- **Logging:** Winston
-- **Security:** Helmet, express-rate-limit
-- **Documentation:** Swagger/OpenAPI
-- **Code Quality:** ESLint, Prettier
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js 5
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **Authentication**: JWT (access + refresh tokens)
+- **Validation**: Zod
+- **Documentation**: Swagger/OpenAPI
+- **Logging**: Winston
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL 14+
+- npm 9+
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd nurozh_therapist_project
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your database credentials and secrets
+
+# Run database migrations
+npx prisma migrate dev
+
+# Seed the database
+npm run seed
+
+# Start development server
+npm run dev
+```
+
+### Default Admin Account
+
+After seeding, login with:
+- **Email**: `admin@nurozh.com`
+- **Password**: `Admin@123456`
 
 ## Project Structure
 
 ```
-├── config/               # Configuration files
-│   ├── constants.js      # Application constants
-│   ├── env.js            # Environment validation
-│   ├── logger.js         # Winston logger setup
-│   ├── prisma.js         # Prisma client
-│   └── swagger.js        # API documentation config
-├── middleware/           # Custom middleware
-│   ├── errorHandler.js   # Global error handler
-│   ├── requestId.js      # Request ID tracking
-│   ├── security.js       # Security middleware
-│   └── validate.js       # Zod validation middleware
-├── prisma/               # Database schema & migrations
-│   ├── schema.prisma
-│   └── migrations/
-├── routes/               # API routes
-│   └── health.routes.js
-├── utils/                # Utility functions
-│   └── errors.js         # Custom error classes
-├── app.js                # Express app setup
-├── server.js             # Server entry point
-└── package.json
+src/
+├── config/              # Configuration files
+│   ├── constants.js     # Application constants & enums
+│   ├── env.js           # Environment validation (Zod)
+│   ├── logger.js        # Winston logger setup
+│   ├── prisma.js        # Prisma client instance
+│   └── swagger.js       # API documentation config
+├── middleware/          # Express middleware
+│   ├── auth.js          # JWT authentication
+│   ├── rbac.js          # Role-based access control
+│   ├── errorHandler.js  # Global error handler
+│   ├── requestId.js     # Request ID tracking
+│   ├── security.js      # Helmet & rate limiting
+│   └── validate.js      # Zod validation middleware
+├── modules/             # Feature modules
+│   ├── auth/            # Authentication
+│   ├── users/           # User management
+│   ├── therapists/      # Therapist management
+│   ├── admin/           # Admin operations
+│   ├── bookings/        # Booking system
+│   ├── sessions/        # Session management
+│   ├── payments/        # Payment processing
+│   ├── conversations/   # Messaging
+│   ├── questionnaires/  # Assessments
+│   ├── specialties/     # Therapy specialties
+│   ├── subscriptions/   # Subscriptions
+│   └── uploads/         # File uploads
+├── utils/               # Utility functions
+│   ├── errors.js        # Custom error classes
+│   ├── helpers.js       # Helper functions
+│   ├── jwt.js           # JWT utilities
+│   └── password.js      # Password utilities
+├── seeders/             # Database seeders
+│   └── seed.js
+└── app.js               # Express app setup
 ```
 
-## Getting Started
+## API Documentation
 
-### Prerequisites
-
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-- PostgreSQL database
-
-### Installation
-
-1. Clone the repository
-```bash
-git clone <repository-url>
-cd express-api
+Access Swagger documentation at:
+```
+http://localhost:3000/api-docs
 ```
 
-2. Install dependencies
-```bash
-npm install
-```
+## API Endpoints
 
-3. Set up environment variables
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/auth/register/user` | Register new user |
+| POST | `/api/v1/auth/register/therapist` | Register new therapist |
+| POST | `/api/v1/auth/login/user` | User login |
+| POST | `/api/v1/auth/login/therapist` | Therapist login |
+| POST | `/api/v1/auth/login/admin` | Admin login |
+| POST | `/api/v1/auth/refresh` | Refresh access token |
+| POST | `/api/v1/auth/logout` | Logout |
+| GET | `/api/v1/auth/me` | Get current user |
 
-Create a `.env` file in the root directory:
+### Resources
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users` | List users (admin) |
+| GET | `/api/v1/therapists` | List approved therapists |
+| GET | `/api/v1/specialties` | List therapy specialties |
+| GET/POST | `/api/v1/bookings` | Manage bookings |
+| GET | `/api/v1/sessions` | List sessions |
+| GET/POST | `/api/v1/conversations` | Manage conversations |
+| GET/POST | `/api/v1/payments` | Manage payments |
+| GET | `/api/v1/questionnaires/questions` | Get questionnaire |
+| GET/POST | `/api/v1/subscriptions` | Manage subscriptions |
+
+## Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm start` | Start production server |
+| `npm run seed` | Seed database with initial data |
+| `npm run prisma:studio` | Open Prisma database GUI |
+| `npm run prisma:migrate` | Run database migrations |
+| `npm run lint` | Run ESLint |
+| `npm run format` | Format code with Prettier |
+
+## Environment Variables
 
 ```env
-# Application
-NODE_ENV=development
-PORT=3000
-
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/nurozh"
+
+# Server
+PORT=3000
+NODE_ENV=development
+
+# JWT Secrets (minimum 32 characters)
+JWT_ACCESS_SECRET=your-access-secret-key
+JWT_REFRESH_SECRET=your-refresh-secret-key
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Bunny CDN (optional)
+BUNNY_CDN_STORAGE_ZONE=your-zone
+BUNNY_CDN_API_KEY=your-key
+BUNNY_CDN_PULL_ZONE_URL=https://your-cdn.b-cdn.net
 
 # Logging
 LOG_LEVEL=debug
 ```
 
-4. Generate Prisma client
-```bash
-npm run prisma:generate
-```
+## Database Schema
 
-5. Run database migrations
-```bash
-npm run prisma:migrate
-```
+27 database tables including:
 
-6. Start the server
-```bash
-# Development mode with auto-restart
-npm run dev
+| Category | Tables |
+|----------|--------|
+| **Users & Auth** | users, admins, therapists, roles, permissions, role_permissions, refresh_tokens, otp_verifications |
+| **Therapy** | specialties, therapist_specialties, therapist_documents, therapist_availability, therapist_availability_exceptions |
+| **Bookings** | bookings, sessions, conversations, messages |
+| **Payments** | payments, subscriptions, therapist_payouts |
+| **Questionnaires** | questionnaire_categories, questions, question_options, questionnaire_answers |
+| **System** | notifications, notification_templates, audit_logs, webhook_logs |
 
-# Production mode
-npm start
-```
+See [DOCUMENTATION.md](./DOCUMENTATION.md) for complete schema details.
 
-The server will start on `http://localhost:3000`
+## Roles & Permissions
 
-## API Documentation
+| Role | Description | Permissions |
+|------|-------------|-------------|
+| `super_admin` | Full system access | All 49 |
+| `admin` | Administrative access | 26 |
+| `therapist` | Therapist operations | 14 |
+| `patient` | Patient operations | 20 |
 
-### Interactive Documentation
+## Security Features
 
-Visit `http://localhost:3000/api-docs` for the full Swagger/OpenAPI documentation.
-
-### Endpoints
-
-#### Health Check
-```http
-GET /health
-```
-
-## Development
-
-### Available Scripts
-
-```bash
-# Start production server
-npm start
-
-# Start development server with auto-reload
-npm run dev
-
-# Run ESLint
-npm run lint
-
-# Fix ESLint issues
-npm run lint:fix
-
-# Format code with Prettier
-npm run format
-
-# Check code formatting
-npm run format:check
-
-# Generate Prisma client
-npm run prisma:generate
-
-# Run database migrations
-npm run prisma:migrate
-
-# Open Prisma Studio
-npm run prisma:studio
-```
-
-### Code Quality
-
-The project uses ESLint and Prettier for code quality and formatting.
-
-```bash
-# Check linting
-npm run lint
-
-# Auto-fix linting issues
-npm run lint:fix
-
-# Format all files
-npm run format
-```
+- **Helmet.js** - Security HTTP headers
+- **Rate Limiting** - 100 requests per 15 minutes per IP
+- **Password Hashing** - bcrypt with 12 rounds
+- **JWT Authentication** - Access + refresh token pattern
+- **Input Validation** - Zod schema validation
+- **Request Tracking** - Correlation IDs for tracing
+- **CORS** - Cross-Origin Resource Sharing enabled
 
 ## Error Handling
 
-The API uses custom error classes for consistent error responses:
+Custom error classes for consistent responses:
 
 - `BadRequestError` (400)
 - `UnauthorizedError` (401)
@@ -186,99 +219,38 @@ The API uses custom error classes for consistent error responses:
 - `NotFoundError` (404)
 - `ConflictError` (409)
 - `ValidationError` (422)
+- `DatabaseError` (500)
 - `InternalServerError` (500)
-
-All errors include:
-- `success`: false
-- `error.message`: Human-readable error message
-- `error.errors`: Array of validation errors (if applicable)
-- `requestId`: Correlation ID for tracing
-
-## Security Features
-
-- **Helmet**: Sets security HTTP headers
-- **Rate Limiting**: 100 requests per 15 minutes per IP
-- **CORS**: Cross-Origin Resource Sharing enabled
-- **Input Validation**: Zod schema validation on all inputs
-- **Request Size Limits**: 10MB max request body
-- **Environment Validation**: All environment variables validated at startup
-
-## Logging
-
-Winston is used for structured logging with the following features:
-
-- Console output with colors
-- File logging (error.log, combined.log)
-- Log rotation (5MB max file size, 5 files max)
-- Request correlation IDs
-- Different log levels based on environment
-
-Logs are stored in the `logs/` directory.
-
-## Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| NODE_ENV | Yes | development | Environment (development/production/test) |
-| PORT | No | 3000 | Server port |
-| DATABASE_URL | Yes | - | PostgreSQL connection string |
-| LOG_LEVEL | No | info | Logging level (error/warn/info/debug) |
 
 ## Production Deployment
 
 ### Checklist
 
 - [ ] Set `NODE_ENV=production`
-- [ ] Use strong database credentials
-- [ ] Set up SSL/TLS for database connection
-- [ ] Configure reverse proxy (Nginx/Apache)
+- [ ] Use strong JWT secrets (32+ characters)
+- [ ] Configure production database
+- [ ] Set up SSL/TLS
+- [ ] Configure reverse proxy (Nginx)
 - [ ] Set up process manager (PM2)
-- [ ] Enable database connection pooling
-- [ ] Set up monitoring and alerting
 - [ ] Configure log aggregation
-- [ ] Set up automated backups
-- [ ] Review and adjust rate limits
-- [ ] Update CORS configuration for production domains
+- [ ] Set up monitoring
+- [ ] Update CORS for production domains
 
 ### PM2 Example
 
 ```bash
-# Install PM2
-npm install -g pm2
-
-# Start application
-pm2 start server.js --name api
-
-# Setup auto-restart on system reboot
+pm2 start server.js --name nurozh-api
 pm2 startup
 pm2 save
 ```
 
-## Graceful Shutdown
-
-The application handles graceful shutdown for:
-- SIGTERM signal
-- SIGINT signal (Ctrl+C)
-- Uncaught exceptions
-- Unhandled promise rejections
-
-On shutdown, the application will:
-1. Stop accepting new requests
-2. Close the HTTP server
-3. Disconnect from the database
-4. Exit the process
-
-Timeout: 30 seconds
-
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run linting and formatting
-5. Commit your changes
-6. Push to your fork
-7. Create a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
