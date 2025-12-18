@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams } from "../../utils/helpers.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -53,7 +53,7 @@ router.get("/:id", async (req, res, next) => {
  *     security:
  *       - BearerAuth: []
  */
-router.post("/", authenticate, authorize(PERMISSIONS.SPECIALTIES_CREATE), async (req, res, next) => {
+router.post("/", authenticate, authorize("specialties:create"), async (req, res, next) => {
   try {
     const { name, description, icon_url, display_order } = req.body;
     const specialty = await prisma.specialty.create({
@@ -74,7 +74,7 @@ router.post("/", authenticate, authorize(PERMISSIONS.SPECIALTIES_CREATE), async 
  *     security:
  *       - BearerAuth: []
  */
-router.patch("/:id", authenticate, authorize(PERMISSIONS.SPECIALTIES_UPDATE), async (req, res, next) => {
+router.patch("/:id", authenticate, authorize("specialties:update"), async (req, res, next) => {
   try {
     const { name, description, icon_url, display_order, is_active } = req.body;
     const specialty = await prisma.specialty.update({
@@ -102,7 +102,7 @@ router.patch("/:id", authenticate, authorize(PERMISSIONS.SPECIALTIES_UPDATE), as
  *     security:
  *       - BearerAuth: []
  */
-router.delete("/:id", authenticate, authorize(PERMISSIONS.SPECIALTIES_DELETE), async (req, res, next) => {
+router.delete("/:id", authenticate, authorize("specialties:delete"), async (req, res, next) => {
   try {
     await prisma.specialty.update({ where: { id: req.params.id }, data: { is_active: false } });
     res.status(HTTP_STATUS.NO_CONTENT).send();

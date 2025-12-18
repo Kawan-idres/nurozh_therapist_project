@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, adminOnly } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams, sanitizeAdmin } from "../../utils/helpers.js";
 import { NotFoundError, ConflictError } from "../../utils/errors.js";
@@ -75,7 +75,7 @@ router.post("/admins", authenticate, adminOnly, async (req, res, next) => {
  *     security:
  *       - BearerAuth: []
  */
-router.get("/dashboard", authenticate, authorize(PERMISSIONS.ADMIN_DASHBOARD), async (req, res, next) => {
+router.get("/dashboard", authenticate, authorize("admin:dashboard"), async (req, res, next) => {
   try {
     const [usersCount, therapistsCount, pendingTherapists, bookingsCount, paymentsSum] = await Promise.all([
       prisma.user.count({ where: { deleted_at: null } }),
@@ -106,7 +106,7 @@ router.get("/dashboard", authenticate, authorize(PERMISSIONS.ADMIN_DASHBOARD), a
  *     security:
  *       - BearerAuth: []
  */
-router.get("/audit-logs", authenticate, authorize(PERMISSIONS.ADMIN_AUDIT_LOGS), async (req, res, next) => {
+router.get("/audit-logs", authenticate, authorize("admin:audit_logs"), async (req, res, next) => {
   try {
     const { page, limit, skip } = parsePaginationParams(req.query);
 

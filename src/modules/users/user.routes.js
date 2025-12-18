@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, adminOnly, ownerOrAdmin } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams, sanitizeUser } from "../../utils/helpers.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -17,7 +17,7 @@ const router = Router();
  *     security:
  *       - BearerAuth: []
  */
-router.get("/", authenticate, authorize(PERMISSIONS.USERS_READ), async (req, res, next) => {
+router.get("/", authenticate, authorize("users:read"), async (req, res, next) => {
   try {
     const { page, limit, skip } = parsePaginationParams(req.query);
     const where = { deleted_at: null };
@@ -50,7 +50,7 @@ router.get("/", authenticate, authorize(PERMISSIONS.USERS_READ), async (req, res
  *     security:
  *       - BearerAuth: []
  */
-router.get("/:id", authenticate, authorize(PERMISSIONS.USERS_READ), async (req, res, next) => {
+router.get("/:id", authenticate, authorize("users:read"), async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
@@ -107,7 +107,7 @@ router.patch("/:id", authenticate, ownerOrAdmin((req) => req.params.id), async (
  *     security:
  *       - BearerAuth: []
  */
-router.delete("/:id", authenticate, authorize(PERMISSIONS.USERS_DELETE), async (req, res, next) => {
+router.delete("/:id", authenticate, authorize("users:delete"), async (req, res, next) => {
   try {
     await prisma.user.update({
       where: { id: req.params.id },

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, optionalAuth } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams } from "../../utils/helpers.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -107,7 +107,7 @@ router.post("/answers", authenticate, async (req, res, next) => {
  *     security:
  *       - BearerAuth: []
  */
-router.post("/categories", authenticate, authorize(PERMISSIONS.QUESTIONNAIRES_CREATE), async (req, res, next) => {
+router.post("/categories", authenticate, authorize("questionnaires:create"), async (req, res, next) => {
   try {
     const { name, description, display_order } = req.body;
     const category = await prisma.questionnaireCategory.create({
@@ -128,7 +128,7 @@ router.post("/categories", authenticate, authorize(PERMISSIONS.QUESTIONNAIRES_CR
  *     security:
  *       - BearerAuth: []
  */
-router.post("/questions", authenticate, authorize(PERMISSIONS.QUESTIONNAIRES_CREATE), async (req, res, next) => {
+router.post("/questions", authenticate, authorize("questionnaires:create"), async (req, res, next) => {
   try {
     const { category_id, question_text, question_type, is_required, display_order, scale_min, scale_max, scale_min_label, scale_max_label, options } = req.body;
 

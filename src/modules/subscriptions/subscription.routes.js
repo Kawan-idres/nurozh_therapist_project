@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams } from "../../utils/helpers.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -49,7 +49,7 @@ router.get("/", authenticate, async (req, res, next) => {
  *     security:
  *       - BearerAuth: []
  */
-router.post("/", authenticate, authorize(PERMISSIONS.SUBSCRIPTIONS_CREATE), async (req, res, next) => {
+router.post("/", authenticate, authorize("subscriptions:create"), async (req, res, next) => {
   try {
     const { therapist_id, type, amount, currency } = req.body;
 

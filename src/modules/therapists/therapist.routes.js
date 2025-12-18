@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, adminOnly } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams, sanitizeTherapist } from "../../utils/helpers.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -71,7 +71,7 @@ router.get("/:id", async (req, res, next) => {
  *     security:
  *       - BearerAuth: []
  */
-router.post("/:id/approve", authenticate, authorize(PERMISSIONS.THERAPISTS_APPROVE), async (req, res, next) => {
+router.post("/:id/approve", authenticate, authorize("therapists:approve"), async (req, res, next) => {
   try {
     const therapist = await prisma.therapist.update({
       where: { id: req.params.id },
@@ -97,7 +97,7 @@ router.post("/:id/approve", authenticate, authorize(PERMISSIONS.THERAPISTS_APPRO
  *     security:
  *       - BearerAuth: []
  */
-router.post("/:id/reject", authenticate, authorize(PERMISSIONS.THERAPISTS_APPROVE), async (req, res, next) => {
+router.post("/:id/reject", authenticate, authorize("therapists:approve"), async (req, res, next) => {
   try {
     const therapist = await prisma.therapist.update({
       where: { id: req.params.id },

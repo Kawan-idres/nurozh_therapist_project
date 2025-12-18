@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams } from "../../utils/helpers.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -66,7 +66,7 @@ router.get("/:id", authenticate, async (req, res, next) => {
  *     security:
  *       - BearerAuth: []
  */
-router.post("/", authenticate, authorize(PERMISSIONS.PAYMENTS_CREATE), async (req, res, next) => {
+router.post("/", authenticate, authorize("payments:create"), async (req, res, next) => {
   try {
     const { booking_id, amount, currency } = req.body;
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { authenticate } from "../../middleware/auth.js";
-import { authorize, PERMISSIONS } from "../../middleware/rbac.js";
+import { authorize } from "../../middleware/rbac.js";
 import { successResponse } from "../../utils/helpers.js";
 import { BadRequestError } from "../../utils/errors.js";
 import { HTTP_STATUS, UPLOAD_CONFIG } from "../../config/constants.js";
@@ -45,7 +45,7 @@ const upload = multer({
  *                 type: string
  *                 format: binary
  */
-router.post("/image", authenticate, authorize(PERMISSIONS.UPLOADS_CREATE), upload.single("file"), async (req, res, next) => {
+router.post("/image", authenticate, authorize("uploads:create"), upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) {
       throw new BadRequestError("No file uploaded");
@@ -86,7 +86,7 @@ router.post("/image", authenticate, authorize(PERMISSIONS.UPLOADS_CREATE), uploa
  *                 type: string
  *                 format: binary
  */
-router.post("/document", authenticate, authorize(PERMISSIONS.UPLOADS_CREATE), upload.single("file"), async (req, res, next) => {
+router.post("/document", authenticate, authorize("uploads:create"), upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) {
       throw new BadRequestError("No file uploaded");
