@@ -108,7 +108,7 @@ export const registerTherapist = async (data) => {
       spoken_languages: data.spoken_languages || [],
       preferred_language: data.preferred_language,
       timezone: data.timezone,
-      status: THERAPIST_STATUS.PENDING, // Requires admin approval
+      status: THERAPIST_STATUS.APPROVED, // Requires admin approval
     },
   });
 
