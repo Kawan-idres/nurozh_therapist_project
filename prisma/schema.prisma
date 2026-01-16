@@ -15,7 +15,7 @@ datasource db {
 model User {
   id                      Int       @id @default(autoincrement())
   email                   String?   @unique @db.VarChar(255)
-  phone                   String?   @db.VarChar(20)
+  phone                   String?   @unique @db.VarChar(20)
   password_hash           String?   @db.VarChar(255)
   auth_provider           String?   @db.VarChar(20)
   first_name              String    @db.VarChar(100)
@@ -66,7 +66,7 @@ model Admin {
 model Therapist {
   id                       Int       @id @default(autoincrement())
   email                    String    @unique @db.VarChar(255)
-  phone                    String?   @db.VarChar(20)
+  phone                    String?   @unique @db.VarChar(20)
   password_hash            String    @db.VarChar(255)
   first_name               String    @db.VarChar(100)
   last_name                String    @db.VarChar(100)
