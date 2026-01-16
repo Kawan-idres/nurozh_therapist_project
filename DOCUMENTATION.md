@@ -63,10 +63,11 @@ nurozh_therapist_project/
 
 ### 2.1 Design Decisions
 
-- **No Foreign Key Constraints**: All relationships are handled at the application level, not database level. Foreign key columns exist as UUID fields but without `@relation` constraints.
+- **No Foreign Key Constraints**: All relationships are handled at the application level, not database level. Foreign key columns exist as UUID fields (stored as VARCHAR(36)) but without `@relation` constraints.
 - **Soft Deletes**: Users and therapists have `deleted_at` fields for soft deletion.
-- **Multilingual Support**: Fields like `name`, `description`, `bio`, `title` are JSONB to support multiple languages: `{"en": "...", "ar": "...", "ku": "..."}`
-- **UUID Primary Keys**: All tables use UUID as primary keys.
+- **Multilingual Support**: Fields like `name`, `description`, `bio`, `title` are JSON to support multiple languages: `{"en": "...", "ar": "...", "ku": "..."}`
+- **UUID Primary Keys**: All tables use UUID as primary keys (stored as VARCHAR(36) in MySQL).
+- **Array Fields**: Fields that would be arrays (e.g., `spoken_languages`, `selected_option_ids`) are stored as JSON in MySQL.
 
 ### 2.2 Tables Created (27 total)
 
@@ -285,8 +286,8 @@ router.post("/admin", authenticate, adminOnly, ...);
 ### 6.1 Environment Variables
 
 ```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/nurozh?schema=public"
+# Database (MySQL)
+DATABASE_URL="mysql://user:password@localhost:3306/nurozh"
 
 # Server
 PORT=3000
@@ -498,3 +499,4 @@ curl http://localhost:3000/api/v1/admin/dashboard \
 ---
 
 *Documentation generated on: December 15, 2025*
+*Updated on: January 16, 2026 - Migrated from PostgreSQL to MySQL*
