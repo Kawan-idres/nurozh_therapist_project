@@ -319,6 +319,7 @@ router.get("/:id/availability", async (req, res, next) => {
  * /api/v1/therapists/me/availability:
  *   put:
  *     summary: Update therapist's own availability (Therapist only)
+ *     description: Sets the therapist's weekly recurring schedule. This replaces all existing availability slots.
  *     tags: [Therapists]
  *     security:
  *       - BearerAuth: []
@@ -328,23 +329,78 @@ router.get("/:id/availability", async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - availability
  *             properties:
  *               availability:
  *                 type: array
  *                 items:
  *                   type: object
+ *                   required:
+ *                     - day_of_week
+ *                     - start_time
+ *                     - end_time
  *                   properties:
  *                     day_of_week:
  *                       type: string
  *                       enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+ *                       example: monday
  *                     start_time:
  *                       type: string
- *                       format: time
+ *                       example: "09:00"
+ *                       description: Start time in HH:MM format
  *                     end_time:
  *                       type: string
- *                       format: time
+ *                       example: "17:00"
+ *                       description: End time in HH:MM format
  *                     is_active:
  *                       type: boolean
+ *                       default: true
+ *           example:
+ *             availability:
+ *               - day_of_week: monday
+ *                 start_time: "09:00"
+ *                 end_time: "17:00"
+ *                 is_active: true
+ *               - day_of_week: tuesday
+ *                 start_time: "09:00"
+ *                 end_time: "17:00"
+ *                 is_active: true
+ *     responses:
+ *       200:
+ *         description: Availability updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Availability updated successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       therapist_id:
+ *                         type: integer
+ *                       day_of_week:
+ *                         type: string
+ *                       start_time:
+ *                         type: string
+ *                       end_time:
+ *                         type: string
+ *                       is_active:
+ *                         type: boolean
+ *       400:
+ *         description: Bad request - Only therapists can update availability or invalid data
+ *       401:
+ *         description: Unauthorized - Must be logged in
  */
 router.put("/me/availability", authenticate, async (req, res, next) => {
   try {
