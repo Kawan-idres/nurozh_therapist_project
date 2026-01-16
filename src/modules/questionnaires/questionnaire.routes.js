@@ -444,7 +444,11 @@ router.post("/answers", authenticate, async (req, res, next) => {
  */
 router.get("/answers/user/:userId", authenticate, async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    const userId = parseInt(req.params.userId, 10);
+
+    if (isNaN(userId)) {
+      throw new BadRequestError("Invalid user ID");
+    }
 
     // Only therapists can view client answers
     if (req.user.type !== USER_TYPES.THERAPIST) {
