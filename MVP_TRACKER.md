@@ -20,11 +20,12 @@ This file tracks the implementation progress of MVP features based on the specif
 | Feature | Status | Notes |
 |---------|--------|-------|
 | User email/password registration | ✅ DONE | Public - `/api/v1/auth/register/user` |
-| Therapist creation | ✅ DONE | **Admin only** - `/api/v1/auth/register/therapist` |
+| Therapist creation | ✅ DONE | **Admin only** - `/api/v1/auth/register/therapist` (with specialty assignment) |
 | User login | ✅ DONE | `/api/v1/auth/login/user` |
 | Therapist login | ✅ DONE | `/api/v1/auth/login/therapist` (requires approved status) |
 | Admin login | ✅ DONE | `/api/v1/auth/login/admin` |
 | Phone/OTP registration | ❌ BLOCKED | Requires SMS provider (Twilio, etc.) |
+| Phone uniqueness | ✅ DONE | Unique constraint on phone field for both User and Therapist |
 
 ### 1.2 Token Management (Works for ALL user types)
 
@@ -91,7 +92,8 @@ This file tracks the implementation progress of MVP features based on the specif
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Therapist onboarding | ✅ DONE | Admin creates therapist (auto-approved) |
+| Therapist onboarding | ✅ DONE | Admin creates therapist (auto-approved, with specialties) |
+| Specialty assignment | ✅ DONE | Via registration or `PUT /api/v1/therapists/:id/specialties` |
 | Document upload | ⏳ PENDING | Schema exists, needs file upload integration |
 | Admin approval workflow | ✅ DONE | `/api/v1/therapists/:id/approve` |
 | Set weekly availability | ✅ DONE | `/api/v1/therapists/me/availability` PUT |
@@ -114,13 +116,16 @@ This file tracks the implementation progress of MVP features based on the specif
 |---------|--------|-------|
 | Therapist availability CRUD | ✅ DONE | Full implementation |
 | Availability exceptions | ✅ DONE | Day off / special hours |
-| Create booking | ✅ DONE | Auto-detects free session |
+| Create booking | ✅ DONE | Auto-detects free session, validates session_type, date in future, therapist approved |
+| Scheduling conflict detection | ✅ DONE | Prevents double-booking |
 | Booking status: pending | ✅ DONE | Default on creation |
 | Booking status: confirmed (accept) | ✅ DONE | Therapist confirms |
-| Booking status: rescheduled | ✅ DONE | Either party can reschedule |
-| Booking status: cancelled | ✅ DONE | With reason tracking |
-| Booking status: completed | ✅ DONE | With therapist notes |
+| Booking status: rescheduled | ✅ DONE | Either party can reschedule, tracks `rescheduled_by` |
+| Booking status: cancelled | ✅ DONE | With reason tracking, restores free session if applicable |
+| Booking status: completed | ✅ DONE | With therapist notes and `completed_at` timestamp |
+| Booking status: no_show | ✅ DONE | `/api/v1/bookings/:id/no-show` - free session NOT restored |
 | Free session logic | ✅ DONE | 30 min, marks `free_session_used` on confirm |
+| Reschedule acceptance | ✅ DONE | Other party must accept via `/accept-reschedule` |
 
 ---
 
@@ -196,6 +201,21 @@ This file tracks the implementation progress of MVP features based on the specif
 
 ---
 
+## 10. API Infrastructure
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Swagger/OpenAPI documentation | ✅ DONE | Full docs for all modules |
+| Specialties Swagger docs | ✅ DONE | Complete schema and examples |
+| Questionnaires Swagger docs | ✅ DONE | Includes QuestionnaireCategory, Question, QuestionOption, QuestionnaireAnswer schemas |
+| Bookings Swagger docs | ✅ DONE | Complete ~1100 lines with all endpoints documented |
+| Error handling middleware | ✅ DONE | User-friendly messages, hides stack traces |
+| Prisma error mapping | ✅ DONE | Maps Prisma error codes to readable messages |
+| Request validation | ✅ DONE | Joi schemas for input validation |
+| Request ID tracking | ✅ DONE | All errors include requestId for debugging |
+
+---
+
 ## Implementation Log
 
 ### January 16, 2026
@@ -240,6 +260,51 @@ This file tracks the implementation progress of MVP features based on the specif
   - Added `/bookings` GET with filters (status, therapist_id, user_id, from_date, to_date)
   - Added `/bookings/:id` GET with user, therapist, session, payment details
 
+### January 16, 2026 (Session 2)
+
+- **Phone uniqueness constraint:**
+  - Added `@unique` to phone field in User and Therapist models
+  - Cleared duplicate phone numbers in database
+  - Pushed schema migration
+
+- **Specialty assignment for therapists:**
+  - Updated `registerTherapist` in auth.service.js to accept `specialty_ids`
+  - Added validation schema for `specialty_ids` in auth.schema.js
+  - Added `PUT /api/v1/therapists/:id/specialties` endpoint for admin
+  - Updated Swagger documentation for therapist registration
+
+- **Swagger documentation updates:**
+  - Added complete Swagger docs for specialty.routes.js (Specialty schema, all CRUD endpoints)
+  - Added complete Swagger docs for questionnaire.routes.js (QuestionnaireCategory, Question, QuestionOption, QuestionnaireAnswer schemas)
+  - Complete rewrite of booking.routes.js Swagger docs (~1100 lines)
+
+- **Error handling improvements:**
+  - Added Prisma error code mapping to user-friendly messages
+  - Removed stack traces from API responses
+  - Handle PrismaClientKnownRequestError and PrismaClientValidationError
+  - All errors now return clean, user-friendly messages
+
+- **Questionnaire endpoint fixes:**
+  - Fixed POST `/answers` - only users (not admins) can submit
+  - Added validation to check question_ids exist before saving
+  - Fixed GET `/answers/user/:userId` - parsed userId as integer
+  - Enhanced GET `/my-answers` to include selected_options details
+
+- **Complete bookings module rewrite:**
+  - Full authorization checks (user owns booking, therapist assigned, admin access)
+  - Input validations: date in future, valid session_type, therapist approved
+  - Scheduling conflict detection (prevents double-booking)
+  - Free session handling and restoration on cancel
+  - Added `rescheduled_by` field to track who requested reschedule
+  - Added `completed_at` timestamp field
+  - New POST `/no-show` endpoint (free session NOT restored)
+  - User/therapist details included in responses
+
+- **Database schema updates:**
+  - Added `rescheduled_by` field to Booking model (USER/THERAPIST enum)
+  - Added `completed_at` DateTime field to Booking model
+  - Regenerated Prisma client
+
 ---
 
 ## Priority Tasks Remaining (No Third-Party Required)
@@ -270,4 +335,4 @@ This file tracks the implementation progress of MVP features based on the specif
 
 ---
 
-*Last updated: January 16, 2026*
+*Last updated: January 16, 2026 (Session 2)*
