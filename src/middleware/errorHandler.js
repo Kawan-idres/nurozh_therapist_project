@@ -62,7 +62,9 @@ export const errorHandler = (err, req, res, next) => {
   // Handle Prisma validation errors
   if (err.constructor.name === "PrismaClientValidationError") {
     statusCode = HTTP_STATUS.BAD_REQUEST;
-    message = "Invalid data provided";
+    // Show actual error for debugging (remove in production)
+    console.error("Prisma Validation Error:", err.message);
+    message = err.message.split('\n').slice(-3).join(' ').trim() || "Invalid data provided";
   }
 
   // Handle ValidationError with field-level errors

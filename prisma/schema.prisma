@@ -343,6 +343,8 @@ model Booking {
   rescheduled_from_booking_id Int? // References bookings.id
   reschedule_reason           String?   @db.Text
   rescheduled_at              DateTime? @db.DateTime(6)
+  rescheduled_by              String?   @db.VarChar(20) // user, therapist
+  completed_at                DateTime? @db.DateTime(6)
   cancelled_at                DateTime? @db.DateTime(6)
   cancellation_reason         String?   @db.Text
   cancelled_by                String?   @db.VarChar(20) // user, therapist, admin, system
