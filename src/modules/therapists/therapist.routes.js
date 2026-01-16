@@ -692,4 +692,97 @@ router.post("/:id/reject", authenticate, authorize("therapists:approve"), async 
   }
 });
 
+/**
+ * @swagger
+ * /api/v1/therapists/{id}/specialties:
+ *   put:
+ *     summary: Update therapist specialties (Admin only)
+ *     description: Replace all specialties for a therapist
+ *     tags: [Therapists]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Therapist ID
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - specialty_ids
+ *             properties:
+ *               specialty_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of specialty IDs
+ *                 example: [1, 2, 3]
+ *     responses:
+ *       200:
+ *         description: Specialties updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: Therapist not found
+ */
+router.put("/:id/specialties", authenticate, authorize("therapists:update"), async (req, res, next) => {
+  try {
+    const therapistId = parseInt(req.params.id, 10);
+    if (isNaN(therapistId)) {
+      throw new NotFoundError("Therapist not found");
+    }
+
+    const { specialty_ids } = req.body;
+
+    if (!Array.isArray(specialty_ids)) {
+      throw new BadRequestError("specialty_ids must be an array");
+    }
+
+    // Verify therapist exists
+    const therapist = await prisma.therapist.findUnique({
+      where: { id: therapistId },
+    });
+
+    if (!therapist || therapist.deleted_at) {
+      throw new NotFoundError("Therapist not found");
+    }
+
+    // Delete existing specialties
+    await prisma.therapistSpecialty.deleteMany({
+      where: { therapist_id: therapistId },
+    });
+
+    // Create new specialties
+    if (specialty_ids.length > 0) {
+      await prisma.therapistSpecialty.createMany({
+        data: specialty_ids.map((specialtyId) => ({
+          therapist_id: therapistId,
+          specialty_id: specialtyId,
+        })),
+      });
+    }
+
+    // Fetch updated specialties
+    const specialties = await prisma.specialty.findMany({
+      where: { id: { in: specialty_ids } },
+    });
+
+    res.json(successResponse({
+      therapist_id: therapistId,
+      specialties,
+    }, "Specialties updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

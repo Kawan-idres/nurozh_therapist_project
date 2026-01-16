@@ -79,7 +79,7 @@ export const registerUser = async (data) => {
 /**
  * Create a new therapist (Admin only)
  * @param {Object} data - Therapist data
- * @param {string} adminId - ID of the admin creating the therapist
+ * @param {number} adminId - ID of the admin creating the therapist
  */
 export const registerTherapist = async (data, adminId) => {
   // Check if email already exists
@@ -88,6 +88,16 @@ export const registerTherapist = async (data, adminId) => {
   });
   if (existingEmail) {
     throw new ConflictError(ERROR_MESSAGES.EMAIL_EXISTS);
+  }
+
+  // Check if phone already exists (if provided)
+  if (data.phone) {
+    const existingPhone = await prisma.therapist.findUnique({
+      where: { phone: data.phone },
+    });
+    if (existingPhone) {
+      throw new ConflictError("Phone number already exists");
+    }
   }
 
   // Hash password
@@ -110,6 +120,9 @@ export const registerTherapist = async (data, adminId) => {
       spoken_languages: data.spoken_languages || [],
       preferred_language: data.preferred_language,
       timezone: data.timezone,
+      session_rate_amount: data.session_rate_amount,
+      session_rate_currency: data.session_rate_currency || "USD",
+      session_duration_minutes: data.session_duration_minutes || 50,
       status: THERAPIST_STATUS.APPROVED, // Auto-approved when admin creates
       created_by: adminId,
       approved_by: adminId,
@@ -117,11 +130,31 @@ export const registerTherapist = async (data, adminId) => {
     },
   });
 
+  // Assign specialties if provided
+  if (data.specialty_ids && Array.isArray(data.specialty_ids) && data.specialty_ids.length > 0) {
+    await prisma.therapistSpecialty.createMany({
+      data: data.specialty_ids.map((specialtyId) => ({
+        therapist_id: therapist.id,
+        specialty_id: specialtyId,
+      })),
+    });
+  }
+
+  // Fetch specialties for response
+  const specialties = data.specialty_ids?.length > 0
+    ? await prisma.specialty.findMany({
+        where: { id: { in: data.specialty_ids } },
+      })
+    : [];
+
   // Remove sensitive data
   const { password_hash: _, ...therapistWithoutPassword } = therapist;
 
   return {
-    therapist: therapistWithoutPassword,
+    therapist: {
+      ...therapistWithoutPassword,
+      specialties,
+    },
   };
 };
 

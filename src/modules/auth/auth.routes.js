@@ -85,19 +85,51 @@ router.post(
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: therapist@example.com
  *               phone:
  *                 type: string
+ *                 example: "+9647501234567"
  *               password:
  *                 type: string
  *                 minLength: 8
+ *                 example: "SecurePass123!"
  *               first_name:
  *                 type: string
+ *                 example: "John"
  *               last_name:
  *                 type: string
+ *                 example: "Doe"
  *               years_of_experience:
  *                 type: integer
+ *                 example: 5
  *               license_number:
  *                 type: string
+ *                 example: "LIC-12345"
+ *               bio:
+ *                 type: object
+ *                 description: Multilingual bio
+ *                 example: {"en": "Experienced therapist", "ar": "معالج متمرس"}
+ *               title:
+ *                 type: object
+ *                 description: Multilingual title
+ *                 example: {"en": "Clinical Psychologist", "ar": "أخصائي نفسي سريري"}
+ *               spoken_languages:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["en", "ar"]
+ *               session_rate_amount:
+ *                 type: number
+ *                 example: 75.00
+ *               session_rate_currency:
+ *                 type: string
+ *                 example: "USD"
+ *               specialty_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of specialty IDs to assign to the therapist
+ *                 example: [1, 2, 3]
  *     responses:
  *       201:
  *         description: Therapist created successfully

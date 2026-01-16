@@ -52,6 +52,10 @@ export const therapistRegisterSchema = z.object({
     spoken_languages: z.array(z.string()).optional(),
     preferred_language: z.enum(["en", "ar", "ku"]).default("en"),
     timezone: z.string().default("UTC"),
+    session_rate_amount: z.number().min(0).optional(),
+    session_rate_currency: z.string().length(3).default("USD"),
+    session_duration_minutes: z.number().int().min(15).max(120).default(50),
+    specialty_ids: z.array(z.number().int().positive()).optional(),
   }),
 });
 
