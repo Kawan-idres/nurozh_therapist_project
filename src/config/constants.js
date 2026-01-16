@@ -247,9 +247,16 @@ export const ACTOR_TYPES = {
 // Default values
 export const DEFAULTS = {
   SESSION_DURATION_MINUTES: 50,
+  FREE_SESSION_DURATION_MINUTES: 30, // MVP: First session is 30 minutes free
   CURRENCY: "USD",
   TIMEZONE: "UTC",
   LANGUAGE: "en",
+};
+
+// Free Session Configuration
+export const FREE_SESSION_CONFIG = {
+  DURATION_MINUTES: 30,
+  ALLOWED_SESSION_TYPES: ["video", "audio", "chat"], // All types allowed for free session
 };
 
 // JWT Configuration

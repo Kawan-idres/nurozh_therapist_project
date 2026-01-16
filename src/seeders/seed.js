@@ -270,18 +270,20 @@ async function seed() {
       { name: { en: "Grief & Loss", ar: "الحزن والفقدان", ku: "خەمباری و لەدەستدان" }, description: { en: "Grief counseling and bereavement support" } },
     ];
 
+    // Get existing specialties to avoid duplicates
+    const existingSpecialties = await prisma.specialty.findMany();
+    const existingNames = existingSpecialties.map(s => {
+      try {
+        return typeof s.name === 'string' ? JSON.parse(s.name).en : s.name?.en;
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+
     for (let i = 0; i < specialties.length; i++) {
       const specialty = specialties[i];
-      const existing = await prisma.specialty.findFirst({
-        where: {
-          name: {
-            path: ["en"],
-            equals: specialty.name.en,
-          },
-        },
-      });
 
-      if (!existing) {
+      if (!existingNames.includes(specialty.name.en)) {
         await prisma.specialty.create({
           data: {
             name: specialty.name,

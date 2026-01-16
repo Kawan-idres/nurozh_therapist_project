@@ -77,9 +77,11 @@ export const registerUser = async (data) => {
 };
 
 /**
- * Register a new therapist
+ * Create a new therapist (Admin only)
+ * @param {Object} data - Therapist data
+ * @param {string} adminId - ID of the admin creating the therapist
  */
-export const registerTherapist = async (data) => {
+export const registerTherapist = async (data, adminId) => {
   // Check if email already exists
   const existingEmail = await prisma.therapist.findUnique({
     where: { email: data.email },
@@ -91,7 +93,7 @@ export const registerTherapist = async (data) => {
   // Hash password
   const password_hash = await hashPassword(data.password);
 
-  // Create therapist
+  // Create therapist - auto-approved since admin is creating
   const therapist = await prisma.therapist.create({
     data: {
       email: data.email,
@@ -108,29 +110,18 @@ export const registerTherapist = async (data) => {
       spoken_languages: data.spoken_languages || [],
       preferred_language: data.preferred_language,
       timezone: data.timezone,
-      status: THERAPIST_STATUS.APPROVED, // Requires admin approval
+      status: THERAPIST_STATUS.APPROVED, // Auto-approved when admin creates
+      created_by: adminId,
+      approved_by: adminId,
+      approved_at: new Date(),
     },
   });
-
-  // Generate tokens
-  const tokenPayload = {
-    id: therapist.id,
-    email: therapist.email,
-    type: USER_TYPES.THERAPIST,
-    role: "therapist",
-  };
-
-  const tokens = generateTokenPair(tokenPayload);
-
-  // Store refresh token
-  await storeRefreshToken(tokens.refreshToken, USER_TYPES.THERAPIST, therapist.id);
 
   // Remove sensitive data
   const { password_hash: _, ...therapistWithoutPassword } = therapist;
 
   return {
     therapist: therapistWithoutPassword,
-    ...tokens,
   };
 };
 

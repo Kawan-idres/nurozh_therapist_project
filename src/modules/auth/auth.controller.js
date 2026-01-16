@@ -17,15 +17,15 @@ export const registerUser = async (req, res, next) => {
 };
 
 /**
- * @desc    Register new therapist
+ * @desc    Create new therapist (Admin only)
  * @route   POST /api/v1/auth/register/therapist
- * @access  Public
+ * @access  Private (Admin)
  */
 export const registerTherapist = async (req, res, next) => {
   try {
-    const result = await authService.registerTherapist(req.body);
+    const result = await authService.registerTherapist(req.body, req.user.id);
     res.status(HTTP_STATUS.CREATED).json(
-      successResponse(result, "Therapist registered successfully. Awaiting admin approval.")
+      successResponse(result, "Therapist created successfully")
     );
   } catch (error) {
     next(error);

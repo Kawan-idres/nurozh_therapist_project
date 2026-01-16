@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as authController from "./auth.controller.js";
 import { validate } from "../../middleware/validate.js";
 import { authenticate } from "../../middleware/auth.js";
+import { authorize } from "../../middleware/rbac.js";
 import {
   userRegisterSchema,
   therapistRegisterSchema,
@@ -65,8 +66,10 @@ router.post(
  * @swagger
  * /api/v1/auth/register/therapist:
  *   post:
- *     summary: Register a new therapist
+ *     summary: Create a new therapist (Admin only)
  *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -97,12 +100,16 @@ router.post(
  *                 type: string
  *     responses:
  *       201:
- *         description: Therapist registered successfully
+ *         description: Therapist created successfully
+ *       401:
+ *         description: Unauthorized - Admin access required
  *       409:
  *         description: Email already exists
  */
 router.post(
   "/register/therapist",
+  authenticate,
+  authorize("therapists:create"),
   validate(therapistRegisterSchema),
   authController.registerTherapist
 );

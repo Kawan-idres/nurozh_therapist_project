@@ -3,8 +3,8 @@ import { authenticate, optionalAuth } from "../../middleware/auth.js";
 import { authorize } from "../../middleware/rbac.js";
 import prisma from "../../config/prisma.js";
 import { successResponse, paginatedResponse, buildPaginationResponse, parsePaginationParams } from "../../utils/helpers.js";
-import { NotFoundError } from "../../utils/errors.js";
-import { HTTP_STATUS } from "../../config/constants.js";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../../utils/errors.js";
+import { HTTP_STATUS, USER_TYPES } from "../../config/constants.js";
 
 const router = Router();
 
@@ -93,6 +93,139 @@ router.post("/answers", authenticate, async (req, res, next) => {
     );
 
     res.status(HTTP_STATUS.CREATED).json(successResponse(createdAnswers, "Answers submitted successfully"));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/v1/questionnaires/answers/user/{userId}:
+ *   get:
+ *     summary: Get questionnaire answers for a specific user (Therapist only - must have booking with user)
+ *     tags: [Questionnaires]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to get answers for
+ */
+router.get("/answers/user/:userId", authenticate, async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    // Only therapists can view client answers
+    if (req.user.type !== USER_TYPES.THERAPIST) {
+      throw new ForbiddenError("Only therapists can view client questionnaire answers");
+    }
+
+    // Verify that the therapist has a booking relationship with this user
+    const hasBooking = await prisma.booking.findFirst({
+      where: {
+        therapist_id: req.user.id,
+        user_id: userId,
+      },
+    });
+
+    if (!hasBooking) {
+      throw new ForbiddenError("You can only view questionnaire answers for your clients");
+    }
+
+    // Get user info
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        gender: true,
+        date_of_birth: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    // Get questionnaire answers
+    const answers = await prisma.questionnaireAnswer.findMany({
+      where: { user_id: userId },
+      orderBy: { answered_at: "desc" },
+    });
+
+    // Get question details for each answer
+    const questionIds = [...new Set(answers.map(a => a.question_id))];
+    const questions = await prisma.question.findMany({
+      where: { id: { in: questionIds } },
+    });
+
+    // Get options for questions
+    const options = await prisma.questionOption.findMany({
+      where: { question_id: { in: questionIds } },
+    });
+
+    const questionsMap = {};
+    questions.forEach(q => { questionsMap[q.id] = q; });
+
+    const optionsMap = {};
+    options.forEach(o => {
+      if (!optionsMap[o.question_id]) optionsMap[o.question_id] = [];
+      optionsMap[o.question_id].push(o);
+    });
+
+    // Build response with question details
+    const answersWithDetails = answers.map(answer => {
+      const question = questionsMap[answer.question_id] || answer.question_snapshot;
+      const questionOptions = optionsMap[answer.question_id] || [];
+
+      // Get selected option texts
+      let selectedOptions = [];
+      if (answer.selected_option_ids && Array.isArray(answer.selected_option_ids)) {
+        selectedOptions = questionOptions.filter(o => answer.selected_option_ids.includes(o.id));
+      }
+
+      return {
+        ...answer,
+        question,
+        selected_options: selectedOptions,
+      };
+    });
+
+    res.json(successResponse({
+      user,
+      answers: answersWithDetails,
+    }));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/v1/questionnaires/my-answers:
+ *   get:
+ *     summary: Get current user's own questionnaire answers
+ *     tags: [Questionnaires]
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get("/my-answers", authenticate, async (req, res, next) => {
+  try {
+    if (req.user.type !== USER_TYPES.USER) {
+      throw new BadRequestError("Only patients can view their own questionnaire answers");
+    }
+
+    const answers = await prisma.questionnaireAnswer.findMany({
+      where: { user_id: req.user.id },
+      orderBy: { answered_at: "desc" },
+    });
+
+    res.json(successResponse(answers));
   } catch (error) {
     next(error);
   }
