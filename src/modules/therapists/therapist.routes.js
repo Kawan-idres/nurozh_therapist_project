@@ -180,7 +180,21 @@ router.get("/", async (req, res, next) => {
  * /api/v1/therapists/{id}:
  *   get:
  *     summary: Get therapist by ID with full profile
+ *     description: Retrieves a therapist's full profile including specialties and availability
  *     tags: [Therapists]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Therapist ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Therapist profile retrieved successfully
+ *       404:
+ *         description: Therapist not found
  */
 router.get("/:id", async (req, res, next) => {
   try {
@@ -229,7 +243,21 @@ router.get("/:id", async (req, res, next) => {
  * /api/v1/therapists/{id}/availability:
  *   get:
  *     summary: Get therapist's availability schedule
+ *     description: Retrieves a therapist's weekly availability and any exceptions for the next 30 days
  *     tags: [Therapists]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Therapist ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Availability retrieved successfully
+ *       404:
+ *         description: Therapist not found
  */
 router.get("/:id/availability", async (req, res, next) => {
   try {
@@ -347,9 +375,47 @@ router.put("/me/availability", authenticate, async (req, res, next) => {
  * /api/v1/therapists/me/availability/exception:
  *   post:
  *     summary: Add availability exception (day off or special hours)
+ *     description: Add a day off or special working hours for a specific date
  *     tags: [Therapists]
  *     security:
  *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - exception_date
+ *             properties:
+ *               exception_date:
+ *                 type: string
+ *                 format: date
+ *                 example: "2026-01-20"
+ *                 description: The date for the exception
+ *               is_available:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Whether therapist is available on this date
+ *               start_time:
+ *                 type: string
+ *                 example: "10:00"
+ *                 description: Start time if available (optional)
+ *               end_time:
+ *                 type: string
+ *                 example: "14:00"
+ *                 description: End time if available (optional)
+ *               reason:
+ *                 type: string
+ *                 example: "Personal day off"
+ *                 description: Reason for the exception
+ *     responses:
+ *       201:
+ *         description: Exception added successfully
+ *       400:
+ *         description: Only therapists can add availability exceptions
+ *       401:
+ *         description: Unauthorized
  */
 router.post("/me/availability/exception", authenticate, async (req, res, next) => {
   try {
@@ -381,9 +447,30 @@ router.post("/me/availability/exception", authenticate, async (req, res, next) =
  * /api/v1/therapists/me/clients:
  *   get:
  *     summary: Get therapist's client list (Therapist only)
+ *     description: Retrieves a list of all clients who have booked sessions with this therapist
  *     tags: [Therapists]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Client list retrieved successfully
+ *       400:
+ *         description: Only therapists can view their clients
+ *       401:
+ *         description: Unauthorized
  */
 router.get("/me/clients", authenticate, async (req, res, next) => {
   try {
@@ -434,9 +521,27 @@ router.get("/me/clients", authenticate, async (req, res, next) => {
  * /api/v1/therapists/{id}/approve:
  *   post:
  *     summary: Approve therapist (Admin only)
+ *     description: Approves a pending therapist application
  *     tags: [Therapists]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Therapist ID to approve
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Therapist approved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: Therapist not found
  */
 router.post("/:id/approve", authenticate, authorize("therapists:approve"), async (req, res, next) => {
   try {
@@ -465,9 +570,37 @@ router.post("/:id/approve", authenticate, authorize("therapists:approve"), async
  * /api/v1/therapists/{id}/reject:
  *   post:
  *     summary: Reject therapist (Admin only)
+ *     description: Rejects a pending therapist application
  *     tags: [Therapists]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Therapist ID to reject
+ *         example: 1
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 example: "Incomplete documentation"
+ *                 description: Reason for rejection (optional)
+ *     responses:
+ *       200:
+ *         description: Therapist rejected successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: Therapist not found
  */
 router.post("/:id/reject", authenticate, authorize("therapists:approve"), async (req, res, next) => {
   try {
