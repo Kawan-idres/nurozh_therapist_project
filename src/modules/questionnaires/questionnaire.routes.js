@@ -10,10 +10,149 @@ const router = Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     QuestionnaireCategory:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         name:
+ *           type: object
+ *           description: Multilingual name
+ *           example: {"en": "Mental Health Assessment", "ar": "تقييم الصحة النفسية"}
+ *         description:
+ *           type: object
+ *           description: Multilingual description
+ *           example: {"en": "Questions to assess your mental health status"}
+ *         display_order:
+ *           type: integer
+ *           example: 1
+ *         is_active:
+ *           type: boolean
+ *           example: true
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *     Question:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         category_id:
+ *           type: integer
+ *           example: 1
+ *         question_text:
+ *           type: object
+ *           description: Multilingual question text
+ *           example: {"en": "How often do you feel anxious?", "ar": "كم مرة تشعر بالقلق؟"}
+ *         question_type:
+ *           type: string
+ *           enum: [single_choice, multiple_choice, scale, text]
+ *           example: single_choice
+ *         is_required:
+ *           type: boolean
+ *           example: true
+ *         display_order:
+ *           type: integer
+ *           example: 1
+ *         scale_min:
+ *           type: integer
+ *           description: Minimum value for scale questions
+ *           example: 1
+ *         scale_max:
+ *           type: integer
+ *           description: Maximum value for scale questions
+ *           example: 10
+ *         scale_min_label:
+ *           type: object
+ *           example: {"en": "Never", "ar": "أبداً"}
+ *         scale_max_label:
+ *           type: object
+ *           example: {"en": "Always", "ar": "دائماً"}
+ *         options:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/QuestionOption'
+ *     QuestionOption:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         question_id:
+ *           type: integer
+ *           example: 1
+ *         option_text:
+ *           type: object
+ *           description: Multilingual option text
+ *           example: {"en": "Never", "ar": "أبداً"}
+ *         display_order:
+ *           type: integer
+ *           example: 0
+ *     QuestionnaireAnswer:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         user_id:
+ *           type: integer
+ *           example: 1
+ *         question_id:
+ *           type: integer
+ *           example: 1
+ *         answer_text:
+ *           type: string
+ *           description: Free text answer (for text type questions)
+ *           example: "I often feel stressed at work"
+ *         answer_scale:
+ *           type: integer
+ *           description: Scale value (for scale type questions)
+ *           example: 7
+ *         selected_option_ids:
+ *           type: array
+ *           items:
+ *             type: integer
+ *           description: Selected option IDs (for choice type questions)
+ *           example: [1, 3]
+ *         answered_at:
+ *           type: string
+ *           format: date-time
+ */
+
+/**
+ * @swagger
  * /api/v1/questionnaires/categories:
  *   get:
- *     summary: Get questionnaire categories
+ *     summary: Get all questionnaire categories
+ *     description: Returns a list of all active questionnaire categories. No authentication required.
  *     tags: [Questionnaires]
+ *     responses:
+ *       200:
+ *         description: Categories retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/QuestionnaireCategory'
+ *             example:
+ *               success: true
+ *               data:
+ *                 - id: 1
+ *                   name: {"en": "Mental Health Assessment", "ar": "تقييم الصحة النفسية"}
+ *                   description: {"en": "Questions to assess your mental health status"}
+ *                   display_order: 1
+ *                   is_active: true
  */
 router.get("/categories", async (req, res, next) => {
   try {
@@ -31,8 +170,49 @@ router.get("/categories", async (req, res, next) => {
  * @swagger
  * /api/v1/questionnaires/questions:
  *   get:
- *     summary: Get questions
+ *     summary: Get all questions with options
+ *     description: Returns a list of all active questions with their options. Optionally filter by category.
  *     tags: [Questionnaires]
+ *     parameters:
+ *       - in: query
+ *         name: category_id
+ *         schema:
+ *           type: integer
+ *         description: Filter questions by category ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Questions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Question'
+ *             example:
+ *               success: true
+ *               data:
+ *                 - id: 1
+ *                   category_id: 1
+ *                   question_text: {"en": "How often do you feel anxious?", "ar": "كم مرة تشعر بالقلق؟"}
+ *                   question_type: single_choice
+ *                   is_required: true
+ *                   display_order: 1
+ *                   options:
+ *                     - id: 1
+ *                       question_id: 1
+ *                       option_text: {"en": "Never", "ar": "أبداً"}
+ *                       display_order: 0
+ *                     - id: 2
+ *                       question_id: 1
+ *                       option_text: {"en": "Sometimes", "ar": "أحياناً"}
+ *                       display_order: 1
  */
 router.get("/questions", async (req, res, next) => {
   try {
@@ -67,10 +247,74 @@ router.get("/questions", async (req, res, next) => {
  * @swagger
  * /api/v1/questionnaires/answers:
  *   post:
- *     summary: Submit questionnaire answers
+ *     summary: Submit questionnaire answers (User only)
+ *     description: Submit answers to questionnaire questions. Users can submit multiple answers at once.
  *     tags: [Questionnaires]
  *     security:
  *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - answers
+ *             properties:
+ *               answers:
+ *                 type: array
+ *                 description: Array of answers to submit
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - question_id
+ *                   properties:
+ *                     question_id:
+ *                       type: integer
+ *                       description: ID of the question being answered
+ *                       example: 1
+ *                     answer_text:
+ *                       type: string
+ *                       description: Free text answer (for text type questions)
+ *                       example: "I feel stressed when dealing with deadlines"
+ *                     answer_scale:
+ *                       type: integer
+ *                       description: Scale value (for scale type questions)
+ *                       example: 7
+ *                     selected_option_ids:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       description: Selected option IDs (for choice type questions)
+ *                       example: [1, 3]
+ *           example:
+ *             answers:
+ *               - question_id: 1
+ *                 selected_option_ids: [2]
+ *               - question_id: 2
+ *                 answer_scale: 7
+ *               - question_id: 3
+ *                 answer_text: "I feel anxious when meeting new people"
+ *     responses:
+ *       201:
+ *         description: Answers submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Answers submitted successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/QuestionnaireAnswer'
+ *       401:
+ *         description: Unauthorized - Authentication required
  */
 router.post("/answers", authenticate, async (req, res, next) => {
   try {
@@ -102,7 +346,8 @@ router.post("/answers", authenticate, async (req, res, next) => {
  * @swagger
  * /api/v1/questionnaires/answers/user/{userId}:
  *   get:
- *     summary: Get questionnaire answers for a specific user (Therapist only - must have booking with user)
+ *     summary: Get questionnaire answers for a specific user (Therapist only)
+ *     description: Therapists can view questionnaire answers for their clients. Must have an existing booking relationship with the user.
  *     tags: [Questionnaires]
  *     security:
  *       - BearerAuth: []
@@ -111,8 +356,67 @@ router.post("/answers", authenticate, async (req, res, next) => {
  *         name: userId
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
  *         description: User ID to get answers for
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Answers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         first_name:
+ *                           type: string
+ *                         last_name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         gender:
+ *                           type: string
+ *                         date_of_birth:
+ *                           type: string
+ *                     answers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           question_id:
+ *                             type: integer
+ *                           answer_text:
+ *                             type: string
+ *                           answer_scale:
+ *                             type: integer
+ *                           selected_option_ids:
+ *                             type: array
+ *                             items:
+ *                               type: integer
+ *                           question:
+ *                             $ref: '#/components/schemas/Question'
+ *                           selected_options:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/QuestionOption'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Only therapists can view client answers, or no booking relationship exists
+ *       404:
+ *         description: User not found
  */
 router.get("/answers/user/:userId", authenticate, async (req, res, next) => {
   try {
@@ -209,10 +513,30 @@ router.get("/answers/user/:userId", authenticate, async (req, res, next) => {
  * @swagger
  * /api/v1/questionnaires/my-answers:
  *   get:
- *     summary: Get current user's own questionnaire answers
+ *     summary: Get current user's own questionnaire answers (User only)
+ *     description: Users can view their own submitted questionnaire answers.
  *     tags: [Questionnaires]
  *     security:
  *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Answers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/QuestionnaireAnswer'
+ *       400:
+ *         description: Only patients can view their own answers
+ *       401:
+ *         description: Unauthorized
  */
 router.get("/my-answers", authenticate, async (req, res, next) => {
   try {
@@ -235,10 +559,49 @@ router.get("/my-answers", authenticate, async (req, res, next) => {
  * @swagger
  * /api/v1/questionnaires/categories:
  *   post:
- *     summary: Create questionnaire category (Admin)
+ *     summary: Create questionnaire category (Admin only)
+ *     description: Creates a new questionnaire category. Requires admin authentication with questionnaires:create permission.
  *     tags: [Questionnaires]
  *     security:
  *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: object
+ *                 description: Multilingual category name
+ *                 example: {"en": "Anxiety Assessment", "ar": "تقييم القلق", "ku": "هەڵسەنگاندنی نیگەرانی"}
+ *               description:
+ *                 type: object
+ *                 description: Multilingual category description
+ *                 example: {"en": "Questions to assess anxiety levels", "ar": "أسئلة لتقييم مستويات القلق"}
+ *               display_order:
+ *                 type: integer
+ *                 description: Order in which to display the category
+ *                 example: 1
+ *     responses:
+ *       201:
+ *         description: Category created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/QuestionnaireCategory'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - questionnaires:create permission required
  */
 router.post("/categories", authenticate, authorize("questionnaires:create"), async (req, res, next) => {
   try {
@@ -256,10 +619,95 @@ router.post("/categories", authenticate, authorize("questionnaires:create"), asy
  * @swagger
  * /api/v1/questionnaires/questions:
  *   post:
- *     summary: Create question (Admin)
+ *     summary: Create question (Admin only)
+ *     description: Creates a new question with optional answer options. Requires admin authentication with questionnaires:create permission.
  *     tags: [Questionnaires]
  *     security:
  *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - question_text
+ *               - question_type
+ *             properties:
+ *               category_id:
+ *                 type: integer
+ *                 description: Category ID this question belongs to
+ *                 example: 1
+ *               question_text:
+ *                 type: object
+ *                 description: Multilingual question text
+ *                 example: {"en": "How often do you feel anxious?", "ar": "كم مرة تشعر بالقلق؟"}
+ *               question_type:
+ *                 type: string
+ *                 enum: [single_choice, multiple_choice, scale, text]
+ *                 description: Type of question
+ *                 example: single_choice
+ *               is_required:
+ *                 type: boolean
+ *                 default: true
+ *                 example: true
+ *               display_order:
+ *                 type: integer
+ *                 example: 1
+ *               scale_min:
+ *                 type: integer
+ *                 description: Minimum value (for scale type)
+ *                 example: 1
+ *               scale_max:
+ *                 type: integer
+ *                 description: Maximum value (for scale type)
+ *                 example: 10
+ *               scale_min_label:
+ *                 type: object
+ *                 description: Label for minimum value
+ *                 example: {"en": "Never", "ar": "أبداً"}
+ *               scale_max_label:
+ *                 type: object
+ *                 description: Label for maximum value
+ *                 example: {"en": "Always", "ar": "دائماً"}
+ *               options:
+ *                 type: array
+ *                 description: Answer options (for choice type questions)
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     option_text:
+ *                       type: object
+ *                       example: {"en": "Never", "ar": "أبداً"}
+ *           example:
+ *             category_id: 1
+ *             question_text: {"en": "How often do you feel anxious?", "ar": "كم مرة تشعر بالقلق؟"}
+ *             question_type: single_choice
+ *             is_required: true
+ *             display_order: 1
+ *             options:
+ *               - option_text: {"en": "Never", "ar": "أبداً"}
+ *               - option_text: {"en": "Rarely", "ar": "نادراً"}
+ *               - option_text: {"en": "Sometimes", "ar": "أحياناً"}
+ *               - option_text: {"en": "Often", "ar": "غالباً"}
+ *               - option_text: {"en": "Always", "ar": "دائماً"}
+ *     responses:
+ *       201:
+ *         description: Question created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Question'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - questionnaires:create permission required
  */
 router.post("/questions", authenticate, authorize("questionnaires:create"), async (req, res, next) => {
   try {
