@@ -573,7 +573,39 @@ router.get("/my-answers", authenticate, async (req, res, next) => {
       orderBy: { answered_at: "desc" },
     });
 
-    res.json(successResponse(answers));
+    // Get all question IDs and fetch their options
+    const questionIds = [...new Set(answers.map(a => a.question_id))];
+
+    const options = await prisma.questionOption.findMany({
+      where: { question_id: { in: questionIds } },
+    });
+
+    // Build options map by question_id
+    const optionsMap = {};
+    options.forEach(o => {
+      if (!optionsMap[o.question_id]) optionsMap[o.question_id] = [];
+      optionsMap[o.question_id].push(o);
+    });
+
+    // Enrich answers with selected option details
+    const enrichedAnswers = answers.map(answer => {
+      const questionOptions = optionsMap[answer.question_id] || [];
+
+      // Get selected option texts
+      let selected_options = [];
+      if (answer.selected_option_ids && Array.isArray(answer.selected_option_ids)) {
+        selected_options = questionOptions.filter(o =>
+          answer.selected_option_ids.includes(o.id)
+        );
+      }
+
+      return {
+        ...answer,
+        selected_options,
+      };
+    });
+
+    res.json(successResponse(enrichedAnswers));
   } catch (error) {
     next(error);
   }
