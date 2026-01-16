@@ -17,6 +17,24 @@ const router = Router();
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
+ *     responses:
+ *       200:
+ *         description: Admins list retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Super admin only
  */
 router.get("/admins", authenticate, adminOnly, async (req, res, next) => {
   try {
@@ -44,6 +62,41 @@ router.get("/admins", authenticate, adminOnly, async (req, res, next) => {
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - first_name
+ *               - last_name
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *               first_name:
+ *                 type: string
+ *               last_name:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [admin, super_admin]
+ *                 default: admin
+ *     responses:
+ *       201:
+ *         description: Admin created successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Super admin only
+ *       409:
+ *         description: Email already registered
  */
 router.post("/admins", authenticate, adminOnly, async (req, res, next) => {
   try {
@@ -394,7 +447,8 @@ router.get("/therapists", authenticate, authorize("therapists:read"), async (req
           years_of_experience: true,
           license_number: true,
           status: true,
-          session_rate: true,
+          session_rate_amount: true,
+          session_rate_currency: true,
           created_at: true,
           approved_at: true,
           last_login_at: true,
@@ -603,7 +657,8 @@ router.get("/bookings/:id", authenticate, authorize("bookings:read"), async (req
             last_name: true,
             email: true,
             phone: true,
-            session_rate: true,
+            session_rate_amount: true,
+            session_rate_currency: true,
           },
         },
         session: true,
@@ -629,6 +684,24 @@ router.get("/bookings/:id", authenticate, authorize("bookings:read"), async (req
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
+ *     responses:
+ *       200:
+ *         description: Audit logs retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Requires admin:audit_logs permission
  */
 router.get("/audit-logs", authenticate, authorize("admin:audit_logs"), async (req, res, next) => {
   try {
