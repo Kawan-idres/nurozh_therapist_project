@@ -13,7 +13,7 @@ datasource db {
 // ==================== USERS & AUTHENTICATION ====================
 
 model User {
-  id                      String    @id @default(uuid()) @db.VarChar(36)
+  id                      Int       @id @default(autoincrement())
   email                   String?   @unique @db.VarChar(255)
   phone                   String?   @db.VarChar(20)
   password_hash           String?   @db.VarChar(255)
@@ -37,11 +37,19 @@ model User {
   updated_at              DateTime  @updatedAt @db.DateTime(6)
   deleted_at              DateTime? @db.DateTime(6)
 
+  // Relations (for Prisma queries, no FK constraints in DB)
+  bookings              Booking[]
+  questionnaire_answers QuestionnaireAnswer[]
+  conversations         Conversation[]
+  subscriptions         Subscription[]
+  payments              Payment[]
+  notifications         Notification[]        @relation("UserNotifications")
+
   @@map("users")
 }
 
 model Admin {
-  id            String    @id @default(uuid()) @db.VarChar(36)
+  id            Int       @id @default(autoincrement())
   email         String    @unique @db.VarChar(255)
   password_hash String    @db.VarChar(255)
   first_name    String    @db.VarChar(100)
@@ -56,7 +64,7 @@ model Admin {
 }
 
 model Therapist {
-  id                       String    @id @default(uuid()) @db.VarChar(36)
+  id                       Int       @id @default(autoincrement())
   email                    String    @unique @db.VarChar(255)
   phone                    String?   @db.VarChar(20)
   password_hash            String    @db.VarChar(255)
@@ -74,17 +82,26 @@ model Therapist {
   session_duration_minutes Int?      @default(50)
   spoken_languages         Json?     @db.Json // Array of language codes
   status                   String?   @default("pending") @db.VarChar(30)
-  approved_by              String?   @db.VarChar(36) // References admins.id
+  approved_by              Int? // References admins.id
   approved_at              DateTime? @db.DateTime(6)
   preferred_language       String?   @default("en") @db.VarChar(5)
   timezone                 String?   @default("UTC") @db.VarChar(50)
   last_login_at            DateTime? @db.DateTime(6)
   fcm_token                String?   @db.Text
   device_info              Json?     @db.Json
-  created_by               String?   @db.VarChar(36) // References admins.id
+  created_by               Int? // References admins.id
   created_at               DateTime  @default(now()) @db.DateTime(6)
   updated_at               DateTime  @updatedAt @db.DateTime(6)
   deleted_at               DateTime? @db.DateTime(6)
+
+  // Relations
+  specialties   TherapistSpecialty[]
+  documents     TherapistDocument[]
+  availability  TherapistAvailability[]
+  bookings      Booking[]
+  sessions      Session[]
+  conversations Conversation[]
+  subscriptions Subscription[]
 
   @@map("therapists")
 }
@@ -92,40 +109,47 @@ model Therapist {
 // ==================== RBAC (Role-Based Access Control) ====================
 
 model Role {
-  id          String    @id @default(uuid()) @db.VarChar(36)
+  id          Int       @id @default(autoincrement())
   name        String    @unique @db.VarChar(50) // super_admin, therapist, patient
   description String?   @db.Text
   is_active   Boolean?  @default(true)
   created_at  DateTime  @default(now()) @db.DateTime(6)
   updated_at  DateTime  @updatedAt @db.DateTime(6)
 
+  permissions RolePermission[]
+
   @@map("roles")
 }
 
 model Permission {
-  id          String   @id @default(uuid()) @db.VarChar(36)
+  id          Int      @id @default(autoincrement())
   name        String   @unique @db.VarChar(100) // e.g., "users:read", "bookings:create"
   description String?  @db.Text
   module      String?  @db.VarChar(50) // e.g., "users", "bookings", "therapists"
   created_at  DateTime @default(now()) @db.DateTime(6)
 
+  roles RolePermission[]
+
   @@map("permissions")
 }
 
 model RolePermission {
-  role_id       String   @db.VarChar(36) // References roles.id
-  permission_id String   @db.VarChar(36) // References permissions.id
+  role_id       Int      // References roles.id
+  permission_id Int      // References permissions.id
   created_at    DateTime @default(now()) @db.DateTime(6)
+
+  role       Role       @relation(fields: [role_id], references: [id])
+  permission Permission @relation(fields: [permission_id], references: [id])
 
   @@id([role_id, permission_id])
   @@map("role_permissions")
 }
 
 model RefreshToken {
-  id         String    @id @default(uuid()) @db.VarChar(36)
+  id         Int       @id @default(autoincrement())
   token      String    @unique @db.VarChar(512)
   user_type  String    @db.VarChar(20) // admin, therapist, user
-  user_id    String    @db.VarChar(36)
+  user_id    Int
   expires_at DateTime  @db.DateTime(6)
   revoked_at DateTime? @db.DateTime(6)
   created_at DateTime  @default(now()) @db.DateTime(6)
@@ -136,23 +160,28 @@ model RefreshToken {
 // ==================== SPECIALTIES ====================
 
 model Specialty {
-  id            String    @id @default(uuid()) @db.VarChar(36)
+  id            Int       @id @default(autoincrement())
   name          Json      @db.Json // Multilingual: {"en": "...", "ar": "...", "ku": "..."}
   description   Json?     @db.Json // Multilingual
   icon_url      String?   @db.Text
   is_active     Boolean?  @default(true)
   display_order Int?      @default(0)
-  created_by    String?   @db.VarChar(36) // References admins.id
+  created_by    Int? // References admins.id
   created_at    DateTime  @default(now()) @db.DateTime(6)
   updated_at    DateTime  @updatedAt @db.DateTime(6)
+
+  therapists TherapistSpecialty[]
 
   @@map("specialties")
 }
 
 model TherapistSpecialty {
-  therapist_id String   @db.VarChar(36) // References therapists.id
-  specialty_id String   @db.VarChar(36) // References specialties.id
+  therapist_id Int      // References therapists.id
+  specialty_id Int      // References specialties.id
   created_at   DateTime @default(now()) @db.DateTime(6)
+
+  therapist Therapist @relation(fields: [therapist_id], references: [id])
+  specialty Specialty @relation(fields: [specialty_id], references: [id])
 
   @@id([therapist_id, specialty_id])
   @@map("therapist_specialties")
@@ -161,7 +190,7 @@ model TherapistSpecialty {
 // ==================== OTP & VERIFICATION ====================
 
 model OtpVerification {
-  id          String    @id @default(uuid()) @db.VarChar(36)
+  id          Int       @id @default(autoincrement())
   phone       String    @db.VarChar(20)
   otp_code    String    @db.VarChar(6)
   purpose     String    @db.VarChar(20) // registration, login, password_reset
@@ -176,8 +205,8 @@ model OtpVerification {
 // ==================== THERAPIST DOCUMENTS ====================
 
 model TherapistDocument {
-  id               String    @id @default(uuid()) @db.VarChar(36)
-  therapist_id     String    @db.VarChar(36) // References therapists.id
+  id               Int       @id @default(autoincrement())
+  therapist_id     Int // References therapists.id
   document_type    String?   @db.VarChar(30) // license, certification, degree, id_document
   title            String?   @db.VarChar(255)
   file_url         String    @db.Text
@@ -185,12 +214,14 @@ model TherapistDocument {
   file_size_bytes  BigInt?
   mime_type        String?   @db.VarChar(100)
   status           String?   @default("pending") @db.VarChar(20) // pending, approved, rejected
-  reviewed_by      String?   @db.VarChar(36) // References admins.id
+  reviewed_by      Int? // References admins.id
   reviewed_at      DateTime? @db.DateTime(6)
   rejection_reason String?   @db.Text
   expires_at       DateTime? @db.Date
   created_at       DateTime  @default(now()) @db.DateTime(6)
   updated_at       DateTime  @updatedAt @db.DateTime(6)
+
+  therapist Therapist @relation(fields: [therapist_id], references: [id])
 
   @@map("therapist_documents")
 }
@@ -198,21 +229,23 @@ model TherapistDocument {
 // ==================== QUESTIONNAIRES ====================
 
 model QuestionnaireCategory {
-  id            String    @id @default(uuid()) @db.VarChar(36)
+  id            Int       @id @default(autoincrement())
   name          Json      @db.Json // Multilingual
   description   Json?     @db.Json // Multilingual
   display_order Int?      @default(0)
   is_active     Boolean?  @default(true)
-  created_by    String?   @db.VarChar(36) // References admins.id
+  created_by    Int? // References admins.id
   created_at    DateTime  @default(now()) @db.DateTime(6)
   updated_at    DateTime  @updatedAt @db.DateTime(6)
+
+  questions Question[]
 
   @@map("questionnaire_categories")
 }
 
 model Question {
-  id              String    @id @default(uuid()) @db.VarChar(36)
-  category_id     String?   @db.VarChar(36) // References questionnaire_categories.id
+  id              Int       @id @default(autoincrement())
+  category_id     Int? // References questionnaire_categories.id
   question_text   Json      @db.Json // Multilingual
   question_type   String    @db.VarChar(30) // single_choice, multiple_choice, scale, text
   is_required     Boolean?  @default(true)
@@ -222,34 +255,43 @@ model Question {
   scale_max       Int?
   scale_min_label Json?     @db.Json // Multilingual
   scale_max_label Json?     @db.Json // Multilingual
-  created_by      String?   @db.VarChar(36) // References admins.id
+  created_by      Int? // References admins.id
   created_at      DateTime  @default(now()) @db.DateTime(6)
   updated_at      DateTime  @updatedAt @db.DateTime(6)
+
+  category QuestionnaireCategory? @relation(fields: [category_id], references: [id])
+  options  QuestionOption[]
+  answers  QuestionnaireAnswer[]
 
   @@map("questions")
 }
 
 model QuestionOption {
-  id            String   @id @default(uuid()) @db.VarChar(36)
-  question_id   String   @db.VarChar(36) // References questions.id
+  id            Int      @id @default(autoincrement())
+  question_id   Int // References questions.id
   option_text   Json     @db.Json // Multilingual
   display_order Int?     @default(0)
   is_active     Boolean? @default(true)
   created_at    DateTime @default(now()) @db.DateTime(6)
   updated_at    DateTime @updatedAt @db.DateTime(6)
 
+  question Question @relation(fields: [question_id], references: [id])
+
   @@map("question_options")
 }
 
 model QuestionnaireAnswer {
-  id                  String    @id @default(uuid()) @db.VarChar(36)
-  user_id             String    @db.VarChar(36) // References users.id
-  question_id         String    @db.VarChar(36) // References questions.id
+  id                  Int       @id @default(autoincrement())
+  user_id             Int // References users.id
+  question_id         Int // References questions.id
   answer_text         String?   @db.Text
   answer_scale        Int?
   selected_option_ids Json?     @db.Json // Array of question_options.id
   question_snapshot   Json?     @db.Json // Snapshot of question at time of answer
   answered_at         DateTime? @default(now()) @db.DateTime(6)
+
+  user     User     @relation(fields: [user_id], references: [id])
+  question Question @relation(fields: [question_id], references: [id])
 
   @@map("questionnaire_answers")
 }
@@ -257,8 +299,8 @@ model QuestionnaireAnswer {
 // ==================== AVAILABILITY ====================
 
 model TherapistAvailability {
-  id           String   @id @default(uuid()) @db.VarChar(36)
-  therapist_id String   @db.VarChar(36) // References therapists.id
+  id           Int      @id @default(autoincrement())
+  therapist_id Int // References therapists.id
   day_of_week  String   @db.VarChar(15) // monday, tuesday, etc.
   start_time   DateTime @db.Time(0)
   end_time     DateTime @db.Time(0)
@@ -266,12 +308,14 @@ model TherapistAvailability {
   created_at   DateTime @default(now()) @db.DateTime(6)
   updated_at   DateTime @updatedAt @db.DateTime(6)
 
+  therapist Therapist @relation(fields: [therapist_id], references: [id])
+
   @@map("therapist_availability")
 }
 
 model TherapistAvailabilityException {
-  id             String    @id @default(uuid()) @db.VarChar(36)
-  therapist_id   String    @db.VarChar(36) // References therapists.id
+  id             Int       @id @default(autoincrement())
+  therapist_id   Int // References therapists.id
   exception_date DateTime  @db.Date
   is_available   Boolean?  @default(false)
   start_time     DateTime? @db.Time(0)
@@ -285,35 +329,40 @@ model TherapistAvailabilityException {
 // ==================== BOOKINGS & SESSIONS ====================
 
 model Booking {
-  id                        String    @id @default(uuid()) @db.VarChar(36)
-  user_id                   String    @db.VarChar(36) // References users.id
-  therapist_id              String    @db.VarChar(36) // References therapists.id
-  session_type              String    @db.VarChar(20) // video, audio, chat
-  scheduled_start           DateTime  @db.DateTime(6)
-  scheduled_end             DateTime  @db.DateTime(6)
-  duration_minutes          Int
-  is_free_session           Boolean?  @default(false)
-  amount                    Decimal?  @db.Decimal(10, 2)
-  currency                  String?   @default("USD") @db.VarChar(3)
-  status                    String?   @default("pending") @db.VarChar(30) // pending, confirmed, completed, cancelled, no_show
-  rescheduled_from_booking_id String? @db.VarChar(36) // References bookings.id
-  reschedule_reason         String?   @db.Text
-  rescheduled_at            DateTime? @db.DateTime(6)
-  cancelled_at              DateTime? @db.DateTime(6)
-  cancellation_reason       String?   @db.Text
-  cancelled_by              String?   @db.VarChar(20) // user, therapist, admin, system
-  confirmed_at              DateTime? @db.DateTime(6)
-  user_notes                String?   @db.Text
-  therapist_notes           String?   @db.Text
-  created_at                DateTime  @default(now()) @db.DateTime(6)
-  updated_at                DateTime  @updatedAt @db.DateTime(6)
+  id                          Int       @id @default(autoincrement())
+  user_id                     Int // References users.id
+  therapist_id                Int // References therapists.id
+  session_type                String    @db.VarChar(20) // video, audio, chat
+  scheduled_start             DateTime  @db.DateTime(6)
+  scheduled_end               DateTime  @db.DateTime(6)
+  duration_minutes            Int
+  is_free_session             Boolean?  @default(false)
+  amount                      Decimal?  @db.Decimal(10, 2)
+  currency                    String?   @default("USD") @db.VarChar(3)
+  status                      String?   @default("pending") @db.VarChar(30) // pending, confirmed, completed, cancelled, no_show
+  rescheduled_from_booking_id Int? // References bookings.id
+  reschedule_reason           String?   @db.Text
+  rescheduled_at              DateTime? @db.DateTime(6)
+  cancelled_at                DateTime? @db.DateTime(6)
+  cancellation_reason         String?   @db.Text
+  cancelled_by                String?   @db.VarChar(20) // user, therapist, admin, system
+  confirmed_at                DateTime? @db.DateTime(6)
+  user_notes                  String?   @db.Text
+  therapist_notes             String?   @db.Text
+  created_at                  DateTime  @default(now()) @db.DateTime(6)
+  updated_at                  DateTime  @updatedAt @db.DateTime(6)
+
+  user      User      @relation(fields: [user_id], references: [id])
+  therapist Therapist @relation(fields: [therapist_id], references: [id])
+  session   Session?
+  payment   Payment?
 
   @@map("bookings")
 }
 
 model Session {
-  id                         String    @id @default(uuid()) @db.VarChar(36)
-  booking_id                 String    @db.VarChar(36) // References bookings.id
+  id                         Int       @id @default(autoincrement())
+  booking_id                 Int       @unique // References bookings.id
   session_type               String    @db.VarChar(20) // video, audio, chat
   status                     String?   @default("scheduled") @db.VarChar(20) // scheduled, in_progress, completed, cancelled
   started_at                 DateTime? @db.DateTime(6)
@@ -330,38 +379,49 @@ model Session {
   created_at                 DateTime  @default(now()) @db.DateTime(6)
   updated_at                 DateTime  @updatedAt @db.DateTime(6)
 
+  booking       Booking        @relation(fields: [booking_id], references: [id])
+  therapist     Therapist      @relation(fields: [booking_id], references: [id], map: "session_therapist")
+  conversations Conversation[]
+
   @@map("sessions")
 }
 
 // ==================== CONVERSATIONS & MESSAGES ====================
 
 model Conversation {
-  id                    String    @id @default(uuid()) @db.VarChar(36)
-  user_id               String    @db.VarChar(36) // References users.id
-  therapist_id          String    @db.VarChar(36) // References therapists.id
-  session_id            String?   @db.VarChar(36) // References sessions.id (optional, for session-linked convos)
-  last_message_at       DateTime? @db.DateTime(6)
-  user_last_read_at     DateTime? @db.DateTime(6)
+  id                     Int       @id @default(autoincrement())
+  user_id                Int // References users.id
+  therapist_id           Int // References therapists.id
+  session_id             Int? // References sessions.id (optional, for session-linked convos)
+  last_message_at        DateTime? @db.DateTime(6)
+  user_last_read_at      DateTime? @db.DateTime(6)
   therapist_last_read_at DateTime? @db.DateTime(6)
-  is_active             Boolean?  @default(true)
-  created_at            DateTime  @default(now()) @db.DateTime(6)
-  updated_at            DateTime  @updatedAt @db.DateTime(6)
+  is_active              Boolean?  @default(true)
+  created_at             DateTime  @default(now()) @db.DateTime(6)
+  updated_at             DateTime  @updatedAt @db.DateTime(6)
+
+  user      User       @relation(fields: [user_id], references: [id])
+  therapist Therapist  @relation(fields: [therapist_id], references: [id])
+  session   Session?   @relation(fields: [session_id], references: [id])
+  messages  Message[]
 
   @@map("conversations")
 }
 
 model Message {
-  id              String    @id @default(uuid()) @db.VarChar(36)
-  conversation_id String    @db.VarChar(36) // References conversations.id
+  id              Int       @id @default(autoincrement())
+  conversation_id Int // References conversations.id
   sender_type     String    @db.VarChar(20) // user, therapist, system
-  sender_id       String    @db.VarChar(36)
+  sender_id       Int
   content         String    @db.Text
   message_type    String?   @default("text") @db.VarChar(20) // text, image, file, system
   is_read         Boolean?  @default(false)
   read_at         DateTime? @db.DateTime(6)
   deleted_at      DateTime? @db.DateTime(6)
-  deleted_by      String?   @db.VarChar(36)
+  deleted_by      Int?
   created_at      DateTime  @default(now()) @db.DateTime(6)
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id])
 
   @@map("messages")
 }
@@ -369,9 +429,9 @@ model Message {
 // ==================== SUBSCRIPTIONS ====================
 
 model Subscription {
-  id           String    @id @default(uuid()) @db.VarChar(36)
-  user_id      String    @db.VarChar(36) // References users.id
-  therapist_id String    @db.VarChar(36) // References therapists.id
+  id           Int       @id @default(autoincrement())
+  user_id      Int // References users.id
+  therapist_id Int // References therapists.id
   type         String    @db.VarChar(20) // weekly, monthly
   amount       Decimal   @db.Decimal(10, 2)
   currency     String    @db.VarChar(3)
@@ -381,16 +441,20 @@ model Subscription {
   cancelled_at DateTime? @db.DateTime(6)
   created_at   DateTime  @default(now()) @db.DateTime(6)
 
+  user      User      @relation(fields: [user_id], references: [id])
+  therapist Therapist @relation(fields: [therapist_id], references: [id])
+  payments  Payment[]
+
   @@map("subscriptions")
 }
 
 // ==================== PAYMENTS ====================
 
 model Payment {
-  id                  String    @id @default(uuid()) @db.VarChar(36)
-  booking_id          String?   @db.VarChar(36) // References bookings.id
-  user_id             String    @db.VarChar(36) // References users.id
-  subscription_id     String?   @db.VarChar(36) // References subscriptions.id
+  id                  Int       @id @default(autoincrement())
+  booking_id          Int?      @unique // References bookings.id
+  user_id             Int // References users.id
+  subscription_id     Int? // References subscriptions.id
   amount              Decimal   @db.Decimal(10, 2)
   currency            String?   @default("USD") @db.VarChar(3)
   furatpay_invoice_id String?   @db.VarChar(255)
@@ -408,12 +472,16 @@ model Payment {
   created_at          DateTime  @default(now()) @db.DateTime(6)
   updated_at          DateTime  @updatedAt @db.DateTime(6)
 
+  booking      Booking?      @relation(fields: [booking_id], references: [id])
+  user         User          @relation(fields: [user_id], references: [id])
+  subscription Subscription? @relation(fields: [subscription_id], references: [id])
+
   @@map("payments")
 }
 
 model TherapistPayout {
-  id           String    @id @default(uuid()) @db.VarChar(36)
-  therapist_id String    @db.VarChar(36) // References therapists.id
+  id           Int       @id @default(autoincrement())
+  therapist_id Int // References therapists.id
   period_start DateTime  @db.Date
   period_end   DateTime  @db.Date
   total_amount Decimal   @db.Decimal(10, 2)
@@ -428,10 +496,10 @@ model TherapistPayout {
 // ==================== NOTIFICATIONS ====================
 
 model Notification {
-  id                  String    @id @default(uuid()) @db.VarChar(36)
+  id                  Int       @id @default(autoincrement())
   recipient_type      String    @db.VarChar(20) // user, therapist, admin
-  recipient_id        String    @db.VarChar(36)
-  template_id         String?   @db.VarChar(36) // References notification_templates.id
+  recipient_id        Int
+  template_id         Int? // References notification_templates.id
   title               String    @db.VarChar(255)
   body                String    @db.Text
   channel             String?   @default("push") @db.VarChar(20) // push, email, sms, in_app
@@ -443,15 +511,17 @@ model Notification {
   failed_at           DateTime? @db.DateTime(6)
   failure_reason      String?   @db.Text
   related_entity_type String?   @db.VarChar(50) // booking, payment, session, etc.
-  related_entity_id   String?   @db.VarChar(36)
+  related_entity_id   Int?
   data                Json?     @db.Json // Additional data for the notification
   created_at          DateTime  @default(now()) @db.DateTime(6)
+
+  user User? @relation("UserNotifications", fields: [recipient_id], references: [id], map: "notification_user")
 
   @@map("notifications")
 }
 
 model NotificationTemplate {
-  id             String   @id @default(uuid()) @db.VarChar(36)
+  id             Int      @id @default(autoincrement())
   name           String   @unique @db.VarChar(100)
   title_template Json     @db.Json // Multilingual
   body_template  Json     @db.Json // Multilingual
@@ -466,12 +536,12 @@ model NotificationTemplate {
 // ==================== AUDIT & LOGGING ====================
 
 model AuditLog {
-  id          String   @id @default(uuid()) @db.VarChar(36)
+  id          Int      @id @default(autoincrement())
   actor_type  String   @db.VarChar(20) // user, therapist, admin, system
-  actor_id    String?  @db.VarChar(36)
+  actor_id    Int?
   action      String   @db.VarChar(100) // e.g., "user.created", "booking.cancelled"
   entity_type String   @db.VarChar(50) // e.g., "user", "booking", "therapist"
-  entity_id   String   @db.VarChar(36)
+  entity_id   Int
   old_values  Json?    @db.Json
   new_values  Json?    @db.Json
   ip_address  String?  @db.VarChar(45)
@@ -483,7 +553,7 @@ model AuditLog {
 }
 
 model WebhookLog {
-  id               String    @id @default(uuid()) @db.VarChar(36)
+  id               Int       @id @default(autoincrement())
   source           String    @db.VarChar(50) // e.g., "furatpay", "daily"
   event_type       String?   @db.VarChar(100)
   headers          Json?     @db.Json

@@ -337,8 +337,13 @@ router.get("/users", authenticate, authorize("users:read"), async (req, res, nex
  */
 router.get("/users/:id", authenticate, authorize("users:read"), async (req, res, next) => {
   try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) {
+      throw new NotFoundError("User not found");
+    }
+
     const user = await prisma.user.findUnique({
-      where: { id: req.params.id },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -361,7 +366,7 @@ router.get("/users/:id", authenticate, authorize("users:read"), async (req, res,
             id: true,
             status: true,
             session_type: true,
-            scheduled_at: true,
+            scheduled_start: true,
             therapist: {
               select: { id: true, first_name: true, last_name: true },
             },
@@ -486,8 +491,13 @@ router.get("/therapists", authenticate, authorize("therapists:read"), async (req
  */
 router.get("/therapists/:id", authenticate, authorize("therapists:read"), async (req, res, next) => {
   try {
+    const therapistId = parseInt(req.params.id, 10);
+    if (isNaN(therapistId)) {
+      throw new NotFoundError("Therapist not found");
+    }
+
     const therapist = await prisma.therapist.findUnique({
-      where: { id: req.params.id },
+      where: { id: therapistId },
       include: {
         specialties: {
           include: { specialty: true },
@@ -572,22 +582,22 @@ router.get("/bookings", authenticate, authorize("bookings:read"), async (req, re
     }
 
     if (therapist_id) {
-      where.therapist_id = therapist_id;
+      where.therapist_id = parseInt(therapist_id, 10);
     }
 
     if (user_id) {
-      where.user_id = user_id;
+      where.user_id = parseInt(user_id, 10);
     }
 
     if (from_date || to_date) {
-      where.scheduled_at = {};
+      where.scheduled_start = {};
       if (from_date) {
-        where.scheduled_at.gte = new Date(from_date);
+        where.scheduled_start.gte = new Date(from_date);
       }
       if (to_date) {
         const endDate = new Date(to_date);
         endDate.setDate(endDate.getDate() + 1);
-        where.scheduled_at.lt = endDate;
+        where.scheduled_start.lt = endDate;
       }
     }
 
@@ -638,8 +648,13 @@ router.get("/bookings", authenticate, authorize("bookings:read"), async (req, re
  */
 router.get("/bookings/:id", authenticate, authorize("bookings:read"), async (req, res, next) => {
   try {
+    const bookingId = parseInt(req.params.id, 10);
+    if (isNaN(bookingId)) {
+      throw new NotFoundError("Booking not found");
+    }
+
     const booking = await prisma.booking.findUnique({
-      where: { id: req.params.id },
+      where: { id: bookingId },
       include: {
         user: {
           select: {

@@ -52,8 +52,13 @@ router.get("/", authenticate, authorize("users:read"), async (req, res, next) =>
  */
 router.get("/:id", authenticate, authorize("users:read"), async (req, res, next) => {
   try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) {
+      throw new NotFoundError("User not found");
+    }
+
     const user = await prisma.user.findUnique({
-      where: { id: req.params.id },
+      where: { id: userId },
     });
 
     if (!user || user.deleted_at) {
@@ -75,12 +80,17 @@ router.get("/:id", authenticate, authorize("users:read"), async (req, res, next)
  *     security:
  *       - BearerAuth: []
  */
-router.patch("/:id", authenticate, ownerOrAdmin((req) => req.params.id), async (req, res, next) => {
+router.patch("/:id", authenticate, ownerOrAdmin((req) => parseInt(req.params.id, 10)), async (req, res, next) => {
   try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) {
+      throw new NotFoundError("User not found");
+    }
+
     const { first_name, last_name, date_of_birth, gender, avatar_url, preferred_language, timezone } = req.body;
 
     const user = await prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: userId },
       data: {
         ...(first_name && { first_name }),
         ...(last_name && { last_name }),
@@ -109,8 +119,13 @@ router.patch("/:id", authenticate, ownerOrAdmin((req) => req.params.id), async (
  */
 router.delete("/:id", authenticate, authorize("users:delete"), async (req, res, next) => {
   try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) {
+      throw new NotFoundError("User not found");
+    }
+
     await prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: userId },
       data: { deleted_at: new Date(), status: "inactive" },
     });
 

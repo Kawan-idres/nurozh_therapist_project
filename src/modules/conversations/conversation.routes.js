@@ -50,16 +50,21 @@ router.get("/", authenticate, async (req, res, next) => {
  */
 router.get("/:id/messages", authenticate, async (req, res, next) => {
   try {
+    const conversationId = parseInt(req.params.id, 10);
+    if (isNaN(conversationId)) {
+      throw new NotFoundError("Conversation not found");
+    }
+
     const { page, limit, skip } = parsePaginationParams(req.query);
 
     const [messages, total] = await Promise.all([
       prisma.message.findMany({
-        where: { conversation_id: req.params.id, deleted_at: null },
+        where: { conversation_id: conversationId, deleted_at: null },
         skip,
         take: limit,
         orderBy: { created_at: "desc" },
       }),
-      prisma.message.count({ where: { conversation_id: req.params.id, deleted_at: null } }),
+      prisma.message.count({ where: { conversation_id: conversationId, deleted_at: null } }),
     ]);
 
     const pagination = buildPaginationResponse(page, limit, total);
@@ -80,11 +85,16 @@ router.get("/:id/messages", authenticate, async (req, res, next) => {
  */
 router.post("/:id/messages", authenticate, async (req, res, next) => {
   try {
+    const conversationId = parseInt(req.params.id, 10);
+    if (isNaN(conversationId)) {
+      throw new NotFoundError("Conversation not found");
+    }
+
     const { content, message_type } = req.body;
 
     const message = await prisma.message.create({
       data: {
-        conversation_id: req.params.id,
+        conversation_id: conversationId,
         sender_type: req.user.type,
         sender_id: req.user.id,
         content,
@@ -94,7 +104,7 @@ router.post("/:id/messages", authenticate, async (req, res, next) => {
 
     // Update conversation last message time
     await prisma.conversation.update({
-      where: { id: req.params.id },
+      where: { id: conversationId },
       data: { last_message_at: new Date() },
     });
 
@@ -116,8 +126,28 @@ router.post("/:id/messages", authenticate, async (req, res, next) => {
 router.post("/", authenticate, async (req, res, next) => {
   try {
     const { therapist_id, user_id } = req.body;
-    const finalUserId = req.user.type === USER_TYPES.USER ? req.user.id : user_id;
-    const finalTherapistId = req.user.type === USER_TYPES.THERAPIST ? req.user.id : therapist_id;
+
+    // Parse IDs from body if provided
+    let finalUserId = req.user.id;
+    let finalTherapistId = null;
+
+    if (req.user.type === USER_TYPES.USER) {
+      finalUserId = req.user.id;
+      if (therapist_id) {
+        finalTherapistId = parseInt(therapist_id, 10);
+        if (isNaN(finalTherapistId)) {
+          throw new NotFoundError("Invalid therapist ID");
+        }
+      }
+    } else if (req.user.type === USER_TYPES.THERAPIST) {
+      finalTherapistId = req.user.id;
+      if (user_id) {
+        finalUserId = parseInt(user_id, 10);
+        if (isNaN(finalUserId)) {
+          throw new NotFoundError("Invalid user ID");
+        }
+      }
+    }
 
     let conversation = await prisma.conversation.findFirst({
       where: { user_id: finalUserId, therapist_id: finalTherapistId },

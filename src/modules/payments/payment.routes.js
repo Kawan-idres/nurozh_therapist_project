@@ -49,7 +49,12 @@ router.get("/", authenticate, async (req, res, next) => {
  */
 router.get("/:id", authenticate, async (req, res, next) => {
   try {
-    const payment = await prisma.payment.findUnique({ where: { id: req.params.id } });
+    const paymentId = parseInt(req.params.id, 10);
+    if (isNaN(paymentId)) {
+      throw new NotFoundError("Payment not found");
+    }
+
+    const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
     if (!payment) throw new NotFoundError("Payment not found");
     res.json(successResponse(payment));
   } catch (error) {
@@ -70,9 +75,14 @@ router.post("/", authenticate, authorize("payments:create"), async (req, res, ne
   try {
     const { booking_id, amount, currency } = req.body;
 
+    const bookingIdInt = parseInt(booking_id, 10);
+    if (isNaN(bookingIdInt)) {
+      throw new NotFoundError("Invalid booking ID");
+    }
+
     const payment = await prisma.payment.create({
       data: {
-        booking_id,
+        booking_id: bookingIdInt,
         user_id: req.user.id,
         amount,
         currency: currency || "USD",

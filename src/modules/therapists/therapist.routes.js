@@ -18,7 +18,7 @@ const router = Router();
  *       - in: query
  *         name: specialty_id
  *         schema:
- *           type: string
+ *           type: integer
  *         description: Filter by specialty ID
  *       - in: query
  *         name: language
@@ -112,8 +112,9 @@ router.get("/", async (req, res, next) => {
 
     // Filter by specialty (need to query therapist_specialties)
     if (specialty_id) {
+      const specialtyIdInt = parseInt(specialty_id, 10);
       const therapistSpecialties = await prisma.therapistSpecialty.findMany({
-        where: { specialty_id },
+        where: { specialty_id: specialtyIdInt },
         select: { therapist_id: true },
       });
       const therapistIdsWithSpecialty = therapistSpecialties.map(ts => ts.therapist_id);
@@ -183,8 +184,13 @@ router.get("/", async (req, res, next) => {
  */
 router.get("/:id", async (req, res, next) => {
   try {
+    const therapistId = parseInt(req.params.id, 10);
+    if (isNaN(therapistId)) {
+      throw new NotFoundError("Therapist not found");
+    }
+
     const therapist = await prisma.therapist.findUnique({
-      where: { id: req.params.id },
+      where: { id: therapistId },
     });
 
     if (!therapist || therapist.deleted_at) {
@@ -227,8 +233,13 @@ router.get("/:id", async (req, res, next) => {
  */
 router.get("/:id/availability", async (req, res, next) => {
   try {
+    const therapistId = parseInt(req.params.id, 10);
+    if (isNaN(therapistId)) {
+      throw new NotFoundError("Therapist not found");
+    }
+
     const therapist = await prisma.therapist.findUnique({
-      where: { id: req.params.id },
+      where: { id: therapistId },
     });
 
     if (!therapist || therapist.deleted_at) {
@@ -236,7 +247,7 @@ router.get("/:id/availability", async (req, res, next) => {
     }
 
     const availability = await prisma.therapistAvailability.findMany({
-      where: { therapist_id: req.params.id, is_active: true },
+      where: { therapist_id: therapistId, is_active: true },
       orderBy: { day_of_week: "asc" },
     });
 
@@ -246,7 +257,7 @@ router.get("/:id/availability", async (req, res, next) => {
 
     const exceptions = await prisma.therapistAvailabilityException.findMany({
       where: {
-        therapist_id: req.params.id,
+        therapist_id: therapistId,
         exception_date: {
           gte: today,
           lte: thirtyDaysLater,
@@ -429,8 +440,13 @@ router.get("/me/clients", authenticate, async (req, res, next) => {
  */
 router.post("/:id/approve", authenticate, authorize("therapists:approve"), async (req, res, next) => {
   try {
+    const therapistId = parseInt(req.params.id, 10);
+    if (isNaN(therapistId)) {
+      throw new NotFoundError("Therapist not found");
+    }
+
     const therapist = await prisma.therapist.update({
-      where: { id: req.params.id },
+      where: { id: therapistId },
       data: {
         status: THERAPIST_STATUS.APPROVED,
         approved_by: req.user.id,
@@ -455,10 +471,15 @@ router.post("/:id/approve", authenticate, authorize("therapists:approve"), async
  */
 router.post("/:id/reject", authenticate, authorize("therapists:approve"), async (req, res, next) => {
   try {
+    const therapistId = parseInt(req.params.id, 10);
+    if (isNaN(therapistId)) {
+      throw new NotFoundError("Therapist not found");
+    }
+
     const { reason } = req.body;
 
     const therapist = await prisma.therapist.update({
-      where: { id: req.params.id },
+      where: { id: therapistId },
       data: { status: THERAPIST_STATUS.REJECTED },
     });
 

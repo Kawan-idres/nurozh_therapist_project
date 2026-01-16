@@ -39,7 +39,12 @@ router.get("/", authenticate, async (req, res, next) => {
  */
 router.get("/:id", authenticate, async (req, res, next) => {
   try {
-    const session = await prisma.session.findUnique({ where: { id: req.params.id } });
+    const sessionId = parseInt(req.params.id, 10);
+    if (isNaN(sessionId)) {
+      throw new NotFoundError("Session not found");
+    }
+
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) throw new NotFoundError("Session not found");
     res.json(successResponse(session));
   } catch (error) {
@@ -58,8 +63,13 @@ router.get("/:id", authenticate, async (req, res, next) => {
  */
 router.post("/:id/start", authenticate, async (req, res, next) => {
   try {
+    const sessionId = parseInt(req.params.id, 10);
+    if (isNaN(sessionId)) {
+      throw new NotFoundError("Session not found");
+    }
+
     const session = await prisma.session.update({
-      where: { id: req.params.id },
+      where: { id: sessionId },
       data: { status: SESSION_STATUS.IN_PROGRESS, started_at: new Date() },
     });
     res.json(successResponse(session, "Session started"));
@@ -79,11 +89,20 @@ router.post("/:id/start", authenticate, async (req, res, next) => {
  */
 router.post("/:id/end", authenticate, async (req, res, next) => {
   try {
-    const session = await prisma.session.findUnique({ where: { id: req.params.id } });
+    const sessionId = parseInt(req.params.id, 10);
+    if (isNaN(sessionId)) {
+      throw new NotFoundError("Session not found");
+    }
+
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) {
+      throw new NotFoundError("Session not found");
+    }
+
     const duration = session.started_at ? Math.round((Date.now() - new Date(session.started_at).getTime()) / 60000) : 0;
 
     const updated = await prisma.session.update({
-      where: { id: req.params.id },
+      where: { id: sessionId },
       data: { status: SESSION_STATUS.COMPLETED, ended_at: new Date(), actual_duration_minutes: duration },
     });
     res.json(successResponse(updated, "Session ended"));

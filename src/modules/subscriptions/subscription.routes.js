@@ -53,10 +53,15 @@ router.post("/", authenticate, authorize("subscriptions:create"), async (req, re
   try {
     const { therapist_id, type, amount, currency } = req.body;
 
+    const therapistIdInt = parseInt(therapist_id, 10);
+    if (isNaN(therapistIdInt)) {
+      throw new NotFoundError("Invalid therapist ID");
+    }
+
     const subscription = await prisma.subscription.create({
       data: {
         user_id: req.user.id,
-        therapist_id,
+        therapist_id: therapistIdInt,
         type,
         amount,
         currency,
@@ -83,7 +88,12 @@ router.post("/", authenticate, authorize("subscriptions:create"), async (req, re
  */
 router.get("/:id", authenticate, async (req, res, next) => {
   try {
-    const subscription = await prisma.subscription.findUnique({ where: { id: req.params.id } });
+    const subscriptionId = parseInt(req.params.id, 10);
+    if (isNaN(subscriptionId)) {
+      throw new NotFoundError("Subscription not found");
+    }
+
+    const subscription = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
     if (!subscription) throw new NotFoundError("Subscription not found");
     res.json(successResponse(subscription));
   } catch (error) {
@@ -102,8 +112,13 @@ router.get("/:id", authenticate, async (req, res, next) => {
  */
 router.post("/:id/cancel", authenticate, async (req, res, next) => {
   try {
+    const subscriptionId = parseInt(req.params.id, 10);
+    if (isNaN(subscriptionId)) {
+      throw new NotFoundError("Subscription not found");
+    }
+
     const subscription = await prisma.subscription.update({
-      where: { id: req.params.id },
+      where: { id: subscriptionId },
       data: { status: SUBSCRIPTION_STATUS.CANCELLED, cancelled_at: new Date() },
     });
     res.json(successResponse(subscription, "Subscription cancelled"));

@@ -101,6 +101,11 @@ router.post("/", authenticate, authorize("bookings:create"), async (req, res, ne
   try {
     const { therapist_id, session_type, scheduled_start, user_notes } = req.body;
 
+    const therapistIdInt = parseInt(therapist_id, 10);
+    if (isNaN(therapistIdInt)) {
+      throw new BadRequestError("Invalid therapist ID");
+    }
+
     // Get the user to check free session status
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -112,7 +117,7 @@ router.post("/", authenticate, authorize("bookings:create"), async (req, res, ne
 
     // Get the therapist to get their rates
     const therapist = await prisma.therapist.findUnique({
-      where: { id: therapist_id },
+      where: { id: therapistIdInt },
     });
 
     if (!therapist) {
@@ -144,7 +149,7 @@ router.post("/", authenticate, authorize("bookings:create"), async (req, res, ne
     const booking = await prisma.booking.create({
       data: {
         user_id: req.user.id,
-        therapist_id,
+        therapist_id: therapistIdInt,
         session_type,
         scheduled_start: startDate,
         scheduled_end: endDate,
@@ -174,7 +179,12 @@ router.post("/", authenticate, authorize("bookings:create"), async (req, res, ne
  */
 router.get("/:id", authenticate, async (req, res, next) => {
   try {
-    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } });
+    const bookingId = parseInt(req.params.id, 10);
+    if (isNaN(bookingId)) {
+      throw new NotFoundError("Booking not found");
+    }
+
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
 
     if (!booking) {
       throw new NotFoundError("Booking not found");
@@ -205,13 +215,18 @@ router.get("/:id", authenticate, async (req, res, next) => {
  */
 router.post("/:id/confirm", authenticate, async (req, res, next) => {
   try {
+    const bookingId = parseInt(req.params.id, 10);
+    if (isNaN(bookingId)) {
+      throw new NotFoundError("Booking not found");
+    }
+
     // Only therapists can confirm bookings
     if (req.user.type !== USER_TYPES.THERAPIST) {
       throw new ForbiddenError("Only therapists can confirm bookings");
     }
 
     const existingBooking = await prisma.booking.findUnique({
-      where: { id: req.params.id }
+      where: { id: bookingId }
     });
 
     if (!existingBooking) {
@@ -228,7 +243,7 @@ router.post("/:id/confirm", authenticate, async (req, res, next) => {
     }
 
     const booking = await prisma.booking.update({
-      where: { id: req.params.id },
+      where: { id: bookingId },
       data: {
         status: BOOKING_STATUS.CONFIRMED,
         confirmed_at: new Date()
@@ -274,6 +289,11 @@ router.post("/:id/confirm", authenticate, async (req, res, next) => {
  */
 router.post("/:id/reschedule", authenticate, async (req, res, next) => {
   try {
+    const bookingId = parseInt(req.params.id, 10);
+    if (isNaN(bookingId)) {
+      throw new NotFoundError("Booking not found");
+    }
+
     const { new_scheduled_start, reason } = req.body;
 
     if (!new_scheduled_start) {
@@ -281,7 +301,7 @@ router.post("/:id/reschedule", authenticate, async (req, res, next) => {
     }
 
     const existingBooking = await prisma.booking.findUnique({
-      where: { id: req.params.id }
+      where: { id: bookingId }
     });
 
     if (!existingBooking) {
@@ -305,7 +325,7 @@ router.post("/:id/reschedule", authenticate, async (req, res, next) => {
     const newEndDate = new Date(newStartDate.getTime() + existingBooking.duration_minutes * 60 * 1000);
 
     const booking = await prisma.booking.update({
-      where: { id: req.params.id },
+      where: { id: bookingId },
       data: {
         status: BOOKING_STATUS.RESCHEDULED,
         scheduled_start: newStartDate,
@@ -335,8 +355,13 @@ router.post("/:id/reschedule", authenticate, async (req, res, next) => {
  */
 router.post("/:id/accept-reschedule", authenticate, async (req, res, next) => {
   try {
+    const bookingId = parseInt(req.params.id, 10);
+    if (isNaN(bookingId)) {
+      throw new NotFoundError("Booking not found");
+    }
+
     const existingBooking = await prisma.booking.findUnique({
-      where: { id: req.params.id }
+      where: { id: bookingId }
     });
 
     if (!existingBooking) {
@@ -353,7 +378,7 @@ router.post("/:id/accept-reschedule", authenticate, async (req, res, next) => {
     }
 
     const booking = await prisma.booking.update({
-      where: { id: req.params.id },
+      where: { id: bookingId },
       data: {
         status: BOOKING_STATUS.CONFIRMED,
         confirmed_at: new Date(),
@@ -385,10 +410,15 @@ router.post("/:id/accept-reschedule", authenticate, async (req, res, next) => {
  */
 router.post("/:id/cancel", authenticate, async (req, res, next) => {
   try {
+    const bookingId = parseInt(req.params.id, 10);
+    if (isNaN(bookingId)) {
+      throw new NotFoundError("Booking not found");
+    }
+
     const { reason } = req.body;
 
     const existingBooking = await prisma.booking.findUnique({
-      where: { id: req.params.id }
+      where: { id: bookingId }
     });
 
     if (!existingBooking) {
@@ -409,7 +439,7 @@ router.post("/:id/cancel", authenticate, async (req, res, next) => {
     }
 
     const booking = await prisma.booking.update({
-      where: { id: req.params.id },
+      where: { id: bookingId },
       data: {
         status: BOOKING_STATUS.CANCELLED,
         cancelled_at: new Date(),
@@ -443,6 +473,11 @@ router.post("/:id/cancel", authenticate, async (req, res, next) => {
  */
 router.post("/:id/complete", authenticate, async (req, res, next) => {
   try {
+    const bookingId = parseInt(req.params.id, 10);
+    if (isNaN(bookingId)) {
+      throw new NotFoundError("Booking not found");
+    }
+
     const { therapist_notes } = req.body;
 
     if (req.user.type !== USER_TYPES.THERAPIST) {
@@ -450,7 +485,7 @@ router.post("/:id/complete", authenticate, async (req, res, next) => {
     }
 
     const existingBooking = await prisma.booking.findUnique({
-      where: { id: req.params.id }
+      where: { id: bookingId }
     });
 
     if (!existingBooking) {
@@ -466,7 +501,7 @@ router.post("/:id/complete", authenticate, async (req, res, next) => {
     }
 
     const booking = await prisma.booking.update({
-      where: { id: req.params.id },
+      where: { id: bookingId },
       data: {
         status: BOOKING_STATUS.COMPLETED,
         therapist_notes,

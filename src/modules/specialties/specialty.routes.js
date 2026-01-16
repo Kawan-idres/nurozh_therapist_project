@@ -36,7 +36,12 @@ router.get("/", async (req, res, next) => {
  */
 router.get("/:id", async (req, res, next) => {
   try {
-    const specialty = await prisma.specialty.findUnique({ where: { id: req.params.id } });
+    const specialtyId = parseInt(req.params.id, 10);
+    if (isNaN(specialtyId)) {
+      throw new NotFoundError("Specialty not found");
+    }
+
+    const specialty = await prisma.specialty.findUnique({ where: { id: specialtyId } });
     if (!specialty) throw new NotFoundError("Specialty not found");
     res.json(successResponse(specialty));
   } catch (error) {
@@ -76,9 +81,14 @@ router.post("/", authenticate, authorize("specialties:create"), async (req, res,
  */
 router.patch("/:id", authenticate, authorize("specialties:update"), async (req, res, next) => {
   try {
+    const specialtyId = parseInt(req.params.id, 10);
+    if (isNaN(specialtyId)) {
+      throw new NotFoundError("Specialty not found");
+    }
+
     const { name, description, icon_url, display_order, is_active } = req.body;
     const specialty = await prisma.specialty.update({
-      where: { id: req.params.id },
+      where: { id: specialtyId },
       data: {
         ...(name && { name }),
         ...(description && { description }),
@@ -104,7 +114,12 @@ router.patch("/:id", authenticate, authorize("specialties:update"), async (req, 
  */
 router.delete("/:id", authenticate, authorize("specialties:delete"), async (req, res, next) => {
   try {
-    await prisma.specialty.update({ where: { id: req.params.id }, data: { is_active: false } });
+    const specialtyId = parseInt(req.params.id, 10);
+    if (isNaN(specialtyId)) {
+      throw new NotFoundError("Specialty not found");
+    }
+
+    await prisma.specialty.update({ where: { id: specialtyId }, data: { is_active: false } });
     res.status(HTTP_STATUS.NO_CONTENT).send();
   } catch (error) {
     next(error);
