@@ -13,6 +13,7 @@ const router = Router();
  * /api/v1/therapists:
  *   get:
  *     summary: Get all approved therapists with filters
+ *     description: Returns a paginated list of approved therapists. Supports filtering by specialty, language, price range, experience, and gender.
  *     tags: [Therapists]
  *     parameters:
  *       - in: query
@@ -20,26 +21,31 @@ const router = Router();
  *         schema:
  *           type: integer
  *         description: Filter by specialty ID
+ *         example: 1
  *       - in: query
  *         name: language
  *         schema:
  *           type: string
  *         description: Filter by spoken language (e.g., en, ar, ku)
+ *         example: en
  *       - in: query
  *         name: min_price
  *         schema:
  *           type: number
  *         description: Minimum session rate
+ *         example: 50
  *       - in: query
  *         name: max_price
  *         schema:
  *           type: number
  *         description: Maximum session rate
+ *         example: 150
  *       - in: query
  *         name: min_experience
  *         schema:
  *           type: integer
  *         description: Minimum years of experience
+ *         example: 3
  *       - in: query
  *         name: gender
  *         schema:
@@ -51,14 +57,22 @@ const router = Router();
  *         schema:
  *           type: string
  *         description: Search by name
+ *         example: John
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
+ *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of therapists retrieved successfully
  */
 router.get("/", async (req, res, next) => {
   try {
