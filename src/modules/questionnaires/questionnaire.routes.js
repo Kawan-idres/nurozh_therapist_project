@@ -318,11 +318,35 @@ router.get("/questions", async (req, res, next) => {
  */
 router.post("/answers", authenticate, async (req, res, next) => {
   try {
+    // Only users (patients) can submit questionnaire answers
+    if (req.user.type !== USER_TYPES.USER) {
+      throw new ForbiddenError("Only patients can submit questionnaire answers");
+    }
+
     const { answers } = req.body; // Array of { question_id, answer_text?, answer_scale?, selected_option_ids? }
+
+    if (!answers || !Array.isArray(answers) || answers.length === 0) {
+      throw new BadRequestError("Answers array is required and cannot be empty");
+    }
+
+    // Validate all question_ids exist
+    const questionIds = answers.map(a => a.question_id);
+    const existingQuestions = await prisma.question.findMany({
+      where: { id: { in: questionIds }, is_active: true },
+    });
+
+    if (existingQuestions.length !== questionIds.length) {
+      const existingIds = existingQuestions.map(q => q.id);
+      const missingIds = questionIds.filter(id => !existingIds.includes(id));
+      throw new BadRequestError(`Invalid question IDs: ${missingIds.join(", ")}`);
+    }
+
+    // Create a map of questions for snapshot
+    const questionsMap = {};
+    existingQuestions.forEach(q => { questionsMap[q.id] = q; });
 
     const createdAnswers = await Promise.all(
       answers.map(async (answer) => {
-        const question = await prisma.question.findUnique({ where: { id: answer.question_id } });
         return prisma.questionnaireAnswer.create({
           data: {
             user_id: req.user.id,
@@ -330,7 +354,7 @@ router.post("/answers", authenticate, async (req, res, next) => {
             answer_text: answer.answer_text,
             answer_scale: answer.answer_scale,
             selected_option_ids: answer.selected_option_ids || [],
-            question_snapshot: question,
+            question_snapshot: questionsMap[answer.question_id],
           },
         });
       })
