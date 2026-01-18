@@ -104,7 +104,7 @@ This file tracks the implementation progress of MVP features based on the specif
 | Reschedule booking | ✅ DONE | `/api/v1/bookings/:id/reschedule` |
 | Cancel booking | ✅ DONE | `/api/v1/bookings/:id/cancel` |
 | Complete booking | ✅ DONE | `/api/v1/bookings/:id/complete` |
-| Message clients | ⏳ PENDING | Schema exists |
+| Message clients | ✅ DONE | Full messaging with authorization, read receipts |
 | Start video/audio session | ❌ BLOCKED | Requires WebRTC/Daily.co |
 | View payout summaries | ⏳ PENDING | Schema exists |
 
@@ -161,11 +161,16 @@ This file tracks the implementation progress of MVP features based on the specif
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Conversation schema | ✅ DONE | |
-| Create conversation | ⏳ PENDING | |
-| Send message | ⏳ PENDING | |
-| List messages | ⏳ PENDING | |
-| Mark as read | ⏳ PENDING | |
-| Real-time messaging | ❌ BLOCKED | Requires WebSocket |
+| Create conversation | ✅ DONE | `POST /api/v1/conversations` - requires booking relationship |
+| Get conversations | ✅ DONE | `GET /api/v1/conversations` - with unread count, last message |
+| Get single conversation | ✅ DONE | `GET /api/v1/conversations/:id` |
+| Send message | ✅ DONE | `POST /api/v1/conversations/:id/messages` - with validation |
+| List messages | ✅ DONE | `GET /api/v1/conversations/:id/messages` - with sender details |
+| Mark as read | ✅ DONE | `PATCH /api/v1/conversations/:id/read` |
+| Get unread count | ✅ DONE | `GET /api/v1/conversations/unread-count` |
+| Delete own message | ✅ DONE | `DELETE /api/v1/conversations/:id/messages/:messageId` (soft delete) |
+| Authorization checks | ✅ DONE | Admins blocked, participants only, booking required |
+| Real-time messaging (Socket.IO) | ✅ DONE | WebSocket with JWT auth, typing indicators, read receipts |
 
 ---
 
@@ -305,18 +310,94 @@ This file tracks the implementation progress of MVP features based on the specif
   - Added `completed_at` DateTime field to Booking model
   - Regenerated Prisma client
 
+### January 18, 2026
+
+- **Complete Messaging System Implementation:**
+  - Created `conversation.helpers.js` with authorization functions:
+    - `checkConversationAccess()` - Verifies user is participant, blocks admins
+    - `checkTherapistRelationship()` - Checks booking exists between user/therapist
+    - `getUnreadCount()` - Calculates unread messages per conversation
+    - `getLastMessage()` - Gets most recent message preview
+    - `formatConversationResponse()` - Formats with participant details, unread count
+    - `getSenderDetails()` - Gets sender info for messages
+  - Created `conversation.schema.js` with Zod validation schemas:
+    - `createConversationSchema` - Validates therapist_id/user_id
+    - `sendMessageSchema` - Validates content (1-5000 chars), message_type
+    - `getMessagesSchema`, `getConversationSchema`, `markReadSchema`, `deleteMessageSchema`
+  - **Fixed existing endpoints:**
+    - `GET /conversations` - Blocks admins, includes user/therapist details, unread count, last message
+    - `GET /conversations/:id/messages` - Added authorization, includes sender details
+    - `POST /conversations/:id/messages` - Added authorization, validates content, blocks system message type
+    - `POST /conversations` - Blocks admins, verifies booking relationship exists
+  - **Added new endpoints:**
+    - `GET /conversations/:id` - Get single conversation with full details
+    - `PATCH /conversations/:id/read` - Mark conversation as read (updates user/therapist timestamp)
+    - `GET /conversations/unread-count` - Get total unread and per-conversation breakdown
+    - `DELETE /conversations/:id/messages/:messageId` - Soft delete own message
+  - **Authorization rules implemented:**
+    - Users can only message therapists they have bookings with
+    - Therapists can only message users who have booked with them
+    - Admins are blocked from ALL messaging endpoints (403 Forbidden)
+  - Added complete Swagger documentation for all endpoints
+
+### January 18, 2026 (Session 2)
+
+- **Socket.IO Real-Time Messaging Implementation:**
+  - Installed `socket.io` dependency
+  - Created `src/socket/index.js`:
+    - Socket.IO server initialization with CORS support
+    - JWT authentication middleware (reuses existing `verifyAccessToken`)
+    - Blocks admin users from connecting (same rule as REST API)
+    - Verifies user is active in database before allowing connection
+    - Auto-joins users to all their conversation rooms on connect
+    - Logs connection/disconnection events
+  - Created `src/socket/handlers/messageHandler.js`:
+    - `join_conversation` - Join a specific conversation room (with access check)
+    - `leave_conversation` - Leave a conversation room
+    - `send_message` - Send message (saves to DB, emits to room participants)
+    - `typing` - Broadcast typing indicator to other participants
+    - `mark_read` - Mark messages as read, emit read receipt
+  - Modified `server.js`:
+    - Changed from `app.listen()` to HTTP server with `createServer(app)`
+    - Initialized Socket.IO with the HTTP server
+    - Added Socket.IO URL to startup logs
+  - Integrated with REST API (`conversation.routes.js`):
+    - POST message endpoint now emits `new_message` Socket.IO event
+    - PATCH mark-as-read endpoint now emits `message_read` Socket.IO event
+  - **Socket Events (Client → Server):**
+    - `join_conversation` - Join room `conversation-{id}`
+    - `leave_conversation` - Leave room
+    - `send_message` - Save to DB, emit to room
+    - `typing` - Broadcast typing indicator
+    - `mark_read` - Update DB, emit read receipt
+  - **Socket Events (Server → Client):**
+    - `new_message` - Message received in conversation
+    - `user_typing` - Someone is typing
+    - `message_read` - Message marked as read
+    - `error` - Something went wrong
+    - `joined_conversation` / `left_conversation` - Confirmations
+  - Created `test-socket.html` - Browser-based test client for testing Socket.IO
+  - **Files created/modified:**
+    - `package.json` - Added socket.io dependency
+    - `server.js` - HTTP server + Socket.IO initialization
+    - `src/socket/index.js` - Socket.IO setup with auth
+    - `src/socket/handlers/messageHandler.js` - Event handlers
+    - `src/modules/conversations/conversation.routes.js` - Emit events on REST calls
+    - `test-socket.html` - Test client
+
 ---
 
 ## Priority Tasks Remaining (No Third-Party Required)
 
 1. ✅ ~~Admin dashboard with statistics~~ - DONE
 2. ✅ ~~Admin view all users/therapists/bookings~~ - DONE
-3. ⏳ Payout tracking and reports
-4. ⏳ Conversation/messaging basic CRUD
-5. ⏳ In-app notification system
-6. ⏳ Session creation from booking
-7. ⏳ Therapist document management
-8. ⏳ Login rate limiting (security enhancement)
+3. ✅ ~~Conversation/messaging basic CRUD~~ - DONE
+4. ✅ ~~Real-time messaging (Socket.IO)~~ - DONE
+5. ⏳ Payout tracking and reports
+6. ⏳ In-app notification system
+7. ⏳ Session creation from booking
+8. ⏳ Therapist document management
+9. ⏳ Login rate limiting (security enhancement)
 
 ---
 
@@ -330,9 +411,8 @@ This file tracks the implementation progress of MVP features based on the specif
 | Video/Audio sessions | WebRTC Provider (Daily.co, Twilio, Agora) |
 | Payment processing | Payment Gateway (Stripe, FuratPay) |
 | Push notifications | Firebase FCM |
-| Real-time messaging | WebSocket Server |
 | Session reminders | Cron Job Service |
 
 ---
 
-*Last updated: January 16, 2026 (Session 2)*
+*Last updated: January 18, 2026*

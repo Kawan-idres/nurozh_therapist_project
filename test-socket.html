@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket.IO Test Client</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { color: #00d9ff; }
+    .section { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; color: #00d9ff; }
+    input, button, textarea {
+      padding: 10px; margin: 5px 0; border: none; border-radius: 4px;
+      font-family: monospace; width: 100%; box-sizing: border-box;
+    }
+    input, textarea { background: #0f3460; color: #fff; }
+    button { background: #00d9ff; color: #1a1a2e; cursor: pointer; font-weight: bold; }
+    button:hover { background: #00b8d4; }
+    button:disabled { background: #555; cursor: not-allowed; }
+    .btn-danger { background: #e94560; }
+    .btn-danger:hover { background: #c73e54; }
+    #log {
+      background: #0a0a15; padding: 15px; border-radius: 8px;
+      height: 300px; overflow-y: auto; font-size: 12px;
+    }
+    .log-entry { margin: 5px 0; padding: 5px; border-left: 3px solid #555; }
+    .log-info { border-color: #00d9ff; }
+    .log-success { border-color: #4caf50; }
+    .log-error { border-color: #e94560; }
+    .log-event { border-color: #ff9800; }
+    .status { padding: 5px 10px; border-radius: 4px; display: inline-block; }
+    .status-connected { background: #4caf50; }
+    .status-disconnected { background: #e94560; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Socket.IO Test Client</h1>
+
+    <div class="section">
+      <h3>1. Connection</h3>
+      <label>Server URL:</label>
+      <input type="text" id="serverUrl" value="http://localhost:3000">
+      <label>JWT Token (without "Bearer " prefix):</label>
+      <textarea id="token" rows="3" placeholder="Paste your JWT access token here..."></textarea>
+      <div class="grid">
+        <button id="connectBtn" onclick="connect()">Connect</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled class="btn-danger">Disconnect</button>
+      </div>
+      <p>Status: <span id="status" class="status status-disconnected">Disconnected</span></p>
+    </div>
+
+    <div class="section">
+      <h3>2. Conversation Actions</h3>
+      <label>Conversation ID:</label>
+      <input type="number" id="conversationId" value="1">
+      <div class="grid">
+        <button onclick="joinConversation()" disabled class="action-btn">Join Conversation</button>
+        <button onclick="leaveConversation()" disabled class="action-btn">Leave Conversation</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>3. Send Message</h3>
+      <label>Message Content:</label>
+      <input type="text" id="messageContent" placeholder="Type your message...">
+      <label>Message Type:</label>
+      <select id="messageType" style="padding:10px; width:100%; background:#0f3460; color:#fff; border:none; border-radius:4px;">
+        <option value="text">text</option>
+        <option value="image">image</option>
+        <option value="file">file</option>
+      </select>
+      <button onclick="sendMessage()" disabled class="action-btn">Send Message</button>
+    </div>
+
+    <div class="section">
+      <h3>4. Other Actions</h3>
+      <div class="grid">
+        <button onclick="startTyping()" disabled class="action-btn">Start Typing</button>
+        <button onclick="stopTyping()" disabled class="action-btn">Stop Typing</button>
+        <button onclick="markRead()" disabled class="action-btn">Mark as Read</button>
+        <button onclick="clearLog()">Clear Log</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Event Log</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<strong>[${time}]</strong> ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function updateStatus(connected) {
+      const status = document.getElementById('status');
+      const connectBtn = document.getElementById('connectBtn');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+      const actionBtns = document.querySelectorAll('.action-btn');
+
+      if (connected) {
+        status.textContent = 'Connected';
+        status.className = 'status status-connected';
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        actionBtns.forEach(btn => btn.disabled = false);
+      } else {
+        status.textContent = 'Disconnected';
+        status.className = 'status status-disconnected';
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        actionBtns.forEach(btn => btn.disabled = true);
+      }
+    }
+
+    function connect() {
+      const url = document.getElementById('serverUrl').value;
+      const token = document.getElementById('token').value.trim();
+
+      if (!token) {
+        log('Please enter a JWT token', 'error');
+        return;
+      }
+
+      log(`Connecting to ${url}...`, 'info');
+
+      socket = io(url, {
+        auth: { token: token }
+      });
+
+      socket.on('connect', () => {
+        log(`Connected! Socket ID: ${socket.id}`, 'success');
+        updateStatus(true);
+      });
+
+      socket.on('disconnect', (reason) => {
+        log(`Disconnected: ${reason}`, 'error');
+        updateStatus(false);
+      });
+
+      socket.on('connect_error', (error) => {
+        log(`Connection error: ${error.message}`, 'error');
+        updateStatus(false);
+      });
+
+      // Message events
+      socket.on('new_message', (data) => {
+        log(`NEW MESSAGE: ${JSON.stringify(data, null, 2)}`, 'event');
+      });
+
+      socket.on('user_typing', (data) => {
+        log(`USER TYPING: ${JSON.stringify(data)}`, 'event');
+      });
+
+      socket.on('message_read', (data) => {
+        log(`MESSAGE READ: ${JSON.stringify(data)}`, 'event');
+      });
+
+      // Confirmation events
+      socket.on('joined_conversation', (data) => {
+        log(`Joined conversation: ${data.conversationId}`, 'success');
+      });
+
+      socket.on('left_conversation', (data) => {
+        log(`Left conversation: ${data.conversationId}`, 'success');
+      });
+
+      socket.on('marked_as_read', (data) => {
+        log(`Marked as read: conversation ${data.conversationId}`, 'success');
+      });
+
+      // Error event
+      socket.on('error', (data) => {
+        log(`ERROR: ${data.message}`, 'error');
+      });
+    }
+
+    function disconnect() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+        log('Manually disconnected', 'info');
+        updateStatus(false);
+      }
+    }
+
+    function joinConversation() {
+      const conversationId = parseInt(document.getElementById('conversationId').value);
+      log(`Joining conversation ${conversationId}...`, 'info');
+      socket.emit('join_conversation', { conversationId });
+    }
+
+    function leaveConversation() {
+      const conversationId = parseInt(document.getElementById('conversationId').value);
+      log(`Leaving conversation ${conversationId}...`, 'info');
+      socket.emit('leave_conversation', { conversationId });
+    }
+
+    function sendMessage() {
+      const conversationId = parseInt(document.getElementById('conversationId').value);
+      const content = document.getElementById('messageContent').value;
+      const messageType = document.getElementById('messageType').value;
+
+      if (!content) {
+        log('Please enter a message', 'error');
+        return;
+      }
+
+      log(`Sending message to conversation ${conversationId}...`, 'info');
+      socket.emit('send_message', { conversationId, content, messageType });
+      document.getElementById('messageContent').value = '';
+    }
+
+    function startTyping() {
+      const conversationId = parseInt(document.getElementById('conversationId').value);
+      log(`Sending typing indicator (true)...`, 'info');
+      socket.emit('typing', { conversationId, isTyping: true });
+    }
+
+    function stopTyping() {
+      const conversationId = parseInt(document.getElementById('conversationId').value);
+      log(`Sending typing indicator (false)...`, 'info');
+      socket.emit('typing', { conversationId, isTyping: false });
+    }
+
+    function markRead() {
+      const conversationId = parseInt(document.getElementById('conversationId').value);
+      log(`Marking conversation ${conversationId} as read...`, 'info');
+      socket.emit('mark_read', { conversationId });
+    }
+
+    // Allow Enter key to send message
+    document.getElementById('messageContent').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && socket && socket.connected) {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

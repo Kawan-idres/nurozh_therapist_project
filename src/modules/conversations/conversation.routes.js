@@ -20,6 +20,7 @@ import {
   markReadSchema,
   deleteMessageSchema,
 } from "./conversation.schema.js";
+import { getIO } from "../../socket/index.js";
 
 const router = Router();
 
@@ -547,10 +548,18 @@ router.post("/:id/messages", authenticate, validate(sendMessageSchema), async (r
     // Get sender details for response
     const sender = await getSenderDetails(req.user.type, req.user.id);
 
-    res.status(HTTP_STATUS.CREATED).json(successResponse({
+    const messageWithSender = {
       ...message,
       sender,
-    }));
+    };
+
+    // Emit Socket.IO event for real-time updates
+    const io = getIO();
+    if (io) {
+      io.to(`conversation-${conversationId}`).emit("new_message", messageWithSender);
+    }
+
+    res.status(HTTP_STATUS.CREATED).json(successResponse(messageWithSender));
   } catch (error) {
     next(error);
   }
@@ -810,6 +819,19 @@ router.patch("/:id/read", authenticate, validate(markReadSchema), async (req, re
     });
 
     const formattedConversation = await formatConversationResponse(updatedConversation, role);
+
+    // Emit Socket.IO event for read receipt
+    const io = getIO();
+    if (io) {
+      io.to(`conversation-${conversationId}`).emit("message_read", {
+        conversationId,
+        user: {
+          id: req.user.id,
+          type: req.user.type,
+        },
+        readAt: new Date().toISOString(),
+      });
+    }
 
     res.json(successResponse(formattedConversation, "Conversation marked as read"));
   } catch (error) {

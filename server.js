@@ -1,12 +1,20 @@
+import { createServer } from "http";
 import { env } from "./src/config/env.js";
 import app from "./src/app.js";
 import logger from "./src/config/logger.js";
 import prisma from "./src/config/prisma.js";
+import { initializeSocket } from "./src/socket/index.js";
 
 const PORT = env.PORT;
 
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Initialize Socket.IO
+const io = initializeSocket(httpServer);
+
 // Start server
-const server = app.listen(PORT, () => {
+const server = httpServer.listen(PORT, () => {
   logger.info(`Server started successfully`, {
     port: PORT,
     environment: env.NODE_ENV,
@@ -15,7 +23,8 @@ const server = app.listen(PORT, () => {
   console.log(`\n🚀 Nurozh Therapy Platform API running on port ${PORT}`);
   console.log(`📝 Health check: http://localhost:${PORT}/health`);
   console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
-  console.log(`🔗 API Base: http://localhost:${PORT}/api/v1\n`);
+  console.log(`🔗 API Base: http://localhost:${PORT}/api/v1`);
+  console.log(`🔌 Socket.IO: ws://localhost:${PORT}\n`);
 });
 
 // Graceful shutdown handler
